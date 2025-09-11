@@ -1,26 +1,68 @@
 #include <Arduino.h>
 // #include <Musica.h>
 #include <NewPing.h>
-int b = 4;
-#define TRI_1 6
-#define ECHO_1 7
-#define MAXD 40
-#define TRI_2 8
-#define ECHO_2 9
-int led = 5;
-NewPing ojos_1(TRI_1, ECHO_1, MAXD);
-NewPing ojos_2(TRI_2, ECHO_2, MAXD);
+int trig_1 = 13;
+int echo_1 = 12;
+int maxd = 40;
+int trig_2 = 14;
+int echo_2 = 27;
+int led_1 = 26;
+int sda_1 = 25;
+int scl_1 = 33;
+int led_2 = 32;
+int sda_2 = 15;
+int scl_2 = 2;
+int pinClock = 4;
+int lanch = 5;
+int dato = 18;
+// int led = 5;
+int mot[4][2];
+NewPing ojos_1(trig_1, echo_1, maxd);
+NewPing ojos_2(trig_2, echo_2, maxd);
+TaskHandle_t robotH = NULL;
 
+void puetH(byte data) {
+  digitalWrite(lanch, LOW);
+
+  shiftOut(dato, pinClock, MSBFIRST, data);
+
+  digitalWrite(lanch, HIGH);
+}
+void robot(void *pvParameters) {
+  while (1) {
+    digitalWrite(13, HIGH);
+  }
+}
+
+void senColor(void *pvParameters) {
+  while (1) {
+    puetH(1);
+    digitalWrite(13, HIGH);
+  }
+}
 void setup() {
-  pinMode(ECHO_1, INPUT);
-  pinMode(ECHO_2, INPUT);
-  pinMode(TRI_1, OUTPUT);
-  pinMode(TRI_2, OUTPUT);
-  pinMode(b, INPUT);
-  pinMode(led, OUTPUT);
+  pinMode(19, OUTPUT);
+  pinMode(echo_1, INPUT);
+  pinMode(echo_2, INPUT);
+  pinMode(trig_1, OUTPUT);
+  pinMode(trig_2, OUTPUT);
+  pinMode(led_1, OUTPUT);
+  pinMode(sda_1, OUTPUT);
+  pinMode(scl_1, OUTPUT);
+  pinMode(led_2, OUTPUT);
+  pinMode(sda_2, OUTPUT);
+  pinMode(scl_2, OUTPUT);
+  pinMode(pinClock, OUTPUT);
+  pinMode(lanch, OUTPUT);
+  pinMode(dato, OUTPUT);
+
+  xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, &robotH, 1);
+  xTaskCreatePinnedToCore(senColor, "sensorColor", 2048, NULL, 1, NULL, 1);
 }
 void loop() {
-  if (digitalRead(b) == true) {
+  digitalWrite(19, HIGH);
+  // digitalWrite
+  /*if (digitalRead(b) == true) {
     while (true) {
       digitalWrite(led, HIGH);
       delay(1000);
@@ -36,5 +78,5 @@ void loop() {
         }
       }
     }
-  }
+  }*/
 }
