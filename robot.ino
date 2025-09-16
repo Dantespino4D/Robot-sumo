@@ -1,47 +1,64 @@
 #include <Arduino.h>
 // #include <Musica.h>
+#include <Adafruit_TCS34725.h>
 #include <NewPing.h>
+#include <Wire.h>
+
+int ini = 2;
 int trig_1 = 13;
-int echo_1 = 12;
+int echo_1 = 34;
 int maxd = 40;
-int trig_2 = 14;
-int echo_2 = 27;
-int led_1 = 26;
-int sda_1 = 25;
-int scl_1 = 33;
-int led_2 = 32;
-int sda_2 = 15;
-int scl_2 = 2;
-int pinClock = 4;
-int lanch = 5;
-int dato = 18;
+int trig_2 = 12;
+int echo_2 = 35;
+int led_1 = 15;
+int sda_1 = 21;
+int scl_1 = 22;
+int led_2 = 5;
+int sda_2 = 18;
+int scl_2 = 19;
+int ena_1 = 33; // quizas no se use
+int ena_2 = 32;
 // int led = 5;
-int mot[4][2];
+int mot[2][2] = {{26, 25}, {14, 27}};
 NewPing ojos_1(trig_1, echo_1, maxd);
 NewPing ojos_2(trig_2, echo_2, maxd);
-TaskHandle_t robotH = NULL;
 
-void puetH(byte data) {
-  digitalWrite(lanch, LOW);
-
-  shiftOut(dato, pinClock, MSBFIRST, data);
-
-  digitalWrite(lanch, HIGH);
+void adelante(int x) {
+  alto(0);
+  digitalWrite(mot[0][0], HIGH);
+  digitalWrite(mot[1][0], HIGH);
+  delay(x);
+}
+void atras(int x) {
+  alto(0);
+  digitalWrite(mot[1][1], HIGH);
+  digitalWrite(mot[0][1], HIGH);
+  delay(x);
+}
+void alto(int x) {
+  digitalWrite(mot[0][0], LOW);
+  digitalWrite(mot[0][1], LOW);
+  digitalWrite(mot[1][0], LOW);
+  digitalWrite(mot[1][1], LOW);
+  delay(x);
 }
 void robot(void *pvParameters) {
   while (1) {
-    digitalWrite(13, HIGH);
+    adelante(2000);
+    alto(1000);
+    atras(2000);
+    alto(1000);
   }
 }
 
 void senColor(void *pvParameters) {
   while (1) {
-    puetH(1);
-    digitalWrite(13, HIGH);
+
+    delay(100);
+    // digitalWrite(19, HIGH);
   }
 }
 void setup() {
-  pinMode(19, OUTPUT);
   pinMode(echo_1, INPUT);
   pinMode(echo_2, INPUT);
   pinMode(trig_1, OUTPUT);
@@ -52,31 +69,16 @@ void setup() {
   pinMode(led_2, OUTPUT);
   pinMode(sda_2, OUTPUT);
   pinMode(scl_2, OUTPUT);
-  pinMode(pinClock, OUTPUT);
-  pinMode(lanch, OUTPUT);
-  pinMode(dato, OUTPUT);
+  pinMode(ena_1, OUTPUT);
+  pinMode(ena_2, OUTPUT);
+  pinMode(ini, INPUT);
 
-  xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, &robotH, 1);
+  pinMode(mot[0][0], OUTPUT);
+  pinMode(mot[0][1], OUTPUT);
+  pinMode(mot[1][0], OUTPUT);
+  pinMode(mot[1][1], OUTPUT);
+
+  xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(senColor, "sensorColor", 2048, NULL, 1, NULL, 1);
 }
-void loop() {
-  digitalWrite(19, HIGH);
-  // digitalWrite
-  /*if (digitalRead(b) == true) {
-    while (true) {
-      digitalWrite(led, HIGH);
-      delay(1000);
-      digitalWrite(led, LOW);
-      delay(1000);
-      if (digitalRead(8) == true) {
-        if (ojos_2.ping_cm() <= 40 || ojos_1.ping_cm() <= 40) {
-          while (ojos_1.ping_cm() <= 40) {
-          }
-          while (ojos_2.ping_cm() <= 40) {
-          }
-        } else {
-        }
-      }
-    }
-  }*/
-}
+void loop() {}
