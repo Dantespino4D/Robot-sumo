@@ -4,8 +4,8 @@
 #include <NewPing.h>
 #include <Wire.h>
 // variables que establecen el tiemṕo
-// unsigned long temp1 = 0;
-// unsigned long temp2 = 0;
+unsigned long temp1 = 0;
+unsigned long temp2 = 0;
 
 // bandera(no recuerdo que hace)
 int banc = 0;
@@ -75,101 +75,123 @@ void alto() {
 // TAREA DE LA LOGICA DEL ROBOT
 
 void robot(void *pvParameters) {
-  while (1) {
-    unsigned long temp1 = 0;
-    unsigned long temp2 = 0;
+  // CORRECTO: Variables que necesitan "recordar" su valor van aquí.
+  unsigned long temp1 = 0;
+  unsigned long temp2 = 0;
 
-    // prende al precionar el boton
-    if (digitalRead(ini) == HIGH) {
+  while (1) {
+    // Espera el botón de inicio fuera del bucle principal de lógica.
+    if (!start && digitalRead(ini) == HIGH) {
       start = true;
+      modo = 6; // Establece un estado inicial claro al arrancar.
+      memo1 = false;
+      memo2 = false;
       auxilio();
     }
-    // inicia
+
+    // El bucle principal solo se ejecuta si start es true.
     while (start) {
 
+      // Lectura de sensores al inicio de cada ciclo
       int dist_1 = ojos_1.ping_cm();
       int dist_2 = ojos_2.ping_cm();
-      if (!memo1) {
-        temp1 = millis();
-      }
-      if (!memo2) {
-        temp2 = millis();
-      }
-      if (millis() - temp1 >= 4000) {
-        memo1 = false;
-      }
-      if (millis() - temp2 >= 4000) {
-        memo2 = false;
-      }
 
-      // MAQUINA DE ESTADOS
+      // ================================================================
+      // MAQUINA DE ESTADOS: Lógica de Selección de Estado (Transiciones)
+      // ================================================================
 
-      // selecciona el estado
-
-      // si detecta el limite por sc_1
-      if (xSemaphoreTake(alerta, 0) == pdTRUE) {
-        modo = 0;
-      }
-      // si detecta el limite por sc_2
-      else if (false) {
-        modo = 1;
-      }
-      // si deja de detectar al robot por ojos 1
-      else if (memo1 && dist_1 == 0) {
-        modo = 2;
-      }
-      // si deja de detectar al robot por ojos 2
-      else if (memo2 && dist_2 == 0) {
-        modo = 3;
-      }
-      // si detecta el robot por ojos 1
-      else if (dist_1 != 0) {
-        modo = 4;
-      }
-      // si detecta el robot por ojos 2
-      else if (dist_2 != 0) {
-        modo = 5;
-      }
-      // si no detecta nada
-      else {
+      // Primero, gestionamos las transiciones basadas en tiempo
+      // Si estamos en modo "búsqueda tras perder" (2 o 3) y se acaba el tiempo,
+      // pasamos a modo giro (6)
+      if (modo == 2 && (millis() - temp1 >= 4000)) {
+        modo = 6;
+      } else if (modo == 3 && (millis() - temp2 >= 4000)) {
         modo = 6;
       }
 
-      // ejecuta el estado
+      // Ahora, gestionamos las transiciones basadas en eventos (sensores)
+      // Esta estructura 'if-else if' asegura que solo una condición se cumpla
+      // por ciclo.
+
+      // PRIORIDAD 1: Límite del dohyo
+      if (xSemaphoreTake(alerta, 0) == pdTRUE) {
+        modo = 0; // O el estado que corresponda a sc_1
+      }
+      // else if (/* condición para sensor de color 2 */) {
+      //   modo = 1;
+      // }
+
+      // PRIORIDAD 2: Detectar al oponente
+      else if (dist_1 != 0) {
+        modo = 4; // Atacar en dirección A
+      } else if (dist_2 != 0) {
+        modo = 5; // Atacar en dirección B
+      }
+
+      // PRIORIDAD 3: Perder al oponente que se estaba siguiendo
+      // Si lo veíamos con el sensor 1 (memo1) y ya no lo vemos (dist_1 == 0)
+      else if (memo1 && dist_1 == 0) {
+        modo = 2;      // Iniciar búsqueda temporal en dirección A
+        memo1 = false; // Desactivamos la memoria para que esta condición no se
+                       // repita
+        temp1 = millis(); // INICIAMOS el temporizador de 4 segundos AHORA
+      }
+      // Si lo veíamos con el sensor 2 (memo2) y ya no lo vemos (dist_2 == 0)
+      else if (memo2 && dist_2 == 0) {
+        modo = 3;         // Iniciar búsqueda temporal en dirección B
+        memo2 = false;    // Desactivamos la memoria
+        temp2 = millis(); // INICIAMOS el temporizador de 4 segundos AHORA
+      }
+
+      // PRIORIDAD 4: No hay oponente a la vista y no se acaba de perder
+      else {
+        // Solo entra a modo 6 si no está ya en una búsqueda temporal (modos 2 o
+        // 3)
+        if (modo != 2 && modo != 3) {
+          modo = 6; // Girar para buscar
+        }
+      }
+
+      // ================================================================
+      // MAQUINA DE ESTADOS: Ejecución de Acciones por Estado
+      // ================================================================
       switch (modo) {
-      // detiene el movimiento y retrocede en direccion b
-      case 0:
-        dir_b();
+      case 0:    // Límite detectado por sc_1
+        dir_b(); // Retrocede
         break;
-      // detiene el movimiento y retrocede en direccion a
-      case 1:
+      case 1:    // Límite detectado por sc_2
+        dir_a(); // Retrocede
+        break;
+      case 2:    // Perdió al robot por ojos_1, avanza 4 seg
+        dir_a(); // La transición fuera de este switch se encargará de cambiar
+                 // de estado
+        break;
+      case 3:    // Perdió al robot por ojos_2, avanza 4 seg
+        dir_b(); // La transición fuera de este switch se encargará de cambiar
+                 // de estado
+        break;
+      case 4: // Detecta por ojos_1, avanza
         dir_a();
+        memo1 = true;  // Recordamos que lo vimos con este sensor
+        memo2 = false; // Apagamos la otra memoria para evitar conflictos
         break;
-      // avanza por un tiempo definido de 4 segundo en direccion a
-      case 2:
-        dir_a();
-        break;
-      // avanza por un tiempo definido de 4 segundos en direccion b
-      case 3:
+      case 5: // Detecta por ojos_2, avanza
         dir_b();
+        memo2 = true;  // Recordamos que lo vimos con este sensor
+        memo1 = false; // Apagamos la otra memoria
         break;
-      // avanza en direccion a
-      case 4:
-        dir_a();
-        memo1 = true;
-        break;
-      // avanza en direccion b
-      case 5:
-        dir_b();
-        memo2 = true;
-        break;
-      // da vueltas hasta encontrar el robot
-      case 6:
+      case 6: // No detecta nada, buscar
         giro();
+        memo1 = false; // Limpiamos memorias al empezar a buscar
+        memo2 = false;
         break;
       }
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
+    // Si por alguna razón start se vuelve false (ej. un botón de stop),
+    // detenemos el robot.
+    alto();
+    vTaskDelay(50 / portTICK_PERIOD_MS); // Pequeña pausa
   }
 }
 
