@@ -56,11 +56,13 @@ void dir_a() {
 }
 // funcion que avanza en la direccion b(por definir en el robot fisico)
 void dir_b() {
+  alto();
   digitalWrite(mot[1][1], HIGH);
   digitalWrite(mot[0][1], HIGH);
 }
 // gira al robot
 void giro() {
+  alto();
   digitalWrite(mot[1][0], HIGH);
   digitalWrite(mot[0][1], HIGH);
 }
@@ -89,10 +91,10 @@ void robot(void *pvParameters) {
 
       int dist_1 = ojos_1.ping_cm();
       int dist_2 = ojos_2.ping_cm();
-      if (!memo1) {
+      if (modo == 4) {
         temp1 = millis();
       }
-      if (!memo2) {
+      if (modo == 5) {
         temp2 = millis();
       }
       if (millis() - temp1 >= 4000) {
