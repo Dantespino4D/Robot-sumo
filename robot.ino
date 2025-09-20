@@ -4,8 +4,9 @@
 #include <NewPing.h>
 #include <Wire.h>
 // variables que establecen el tiemṕo
-// unsigned long temp1 = 0;
-// unsigned long temp2 = 0;
+int tiempo1 = 2000; // tiempo que sigue avanzando despues de dejar de detectar
+                    // al rival
+int tiempo2 = 2000; // tiempo que retrocede al detectar el borde
 
 // bandera(no recuerdo que hace)
 int banc = 0;
@@ -17,6 +18,8 @@ bool start = false;
 int modo = 0;
 bool memo1 = false;
 bool memo2 = false;
+bool memo3 = false;
+bool memo4 = false;
 // variables de los pines(y la de distancia maxima)
 int ini = 2;
 int trig_1 = 13;
@@ -80,6 +83,8 @@ void robot(void *pvParameters) {
   while (1) {
     unsigned long temp1 = 0;
     unsigned long temp2 = 0;
+    unsigned long temp3 = 0;
+    unsigned long temp4 = 0;
 
     // prende al precionar el boton
     if (digitalRead(ini) == HIGH) {
@@ -91,17 +96,18 @@ void robot(void *pvParameters) {
 
       int dist_1 = ojos_1.ping_cm();
       int dist_2 = ojos_2.ping_cm();
-      if (modo == 4) {
-        temp1 = millis();
-      }
-      if (modo == 5) {
-        temp2 = millis();
-      }
-      if (millis() - temp1 >= 4000) {
+
+      if (millis() - temp1 >= tiempo1) {
         memo1 = false;
       }
-      if (millis() - temp2 >= 4000) {
+      if (millis() - temp2 >= tiempo1) {
         memo2 = false;
+      }
+      if (millis() - temp3 >= tiempo2) {
+        memo3 = false;
+      }
+      if (millis() - temp4 >= tiempo2) {
+        memo4 = false;
       }
 
       // MAQUINA DE ESTADOS
@@ -109,11 +115,11 @@ void robot(void *pvParameters) {
       // selecciona el estado
 
       // si detecta el limite por sc_1
-      if (xSemaphoreTake(alerta, 0) == pdTRUE) {
+      if (xSemaphoreTake(alerta, 0) == pdTRUE || memo3) {
         modo = 0;
       }
       // si detecta el limite por sc_2
-      else if (false) {
+      else if (false || memo4) {
         modo = 1;
       }
       // si deja de detectar al robot por ojos 1
@@ -142,32 +148,48 @@ void robot(void *pvParameters) {
       // detiene el movimiento y retrocede en direccion b
       case 0:
         dir_b();
+        memo3 = true;
+        temp4 = millis();
         break;
       // detiene el movimiento y retrocede en direccion a
       case 1:
         dir_a();
+        memo4 = true;
+        temp3 = millis();
         break;
       // avanza por un tiempo definido de 4 segundo en direccion a
       case 2:
         dir_a();
+        temp3 = millis();
+        temp4 = millis();
         break;
       // avanza por un tiempo definido de 4 segundos en direccion b
       case 3:
         dir_b();
+        temp3 = millis();
+        temp4 = millis();
         break;
       // avanza en direccion a
       case 4:
         dir_a();
         memo1 = true;
+        temp1 = millis();
+        temp3 = millis();
+        temp4 = millis();
         break;
       // avanza en direccion b
       case 5:
         dir_b();
         memo2 = true;
+        temp2 = millis();
+        temp3 = millis();
+        temp4 = millis();
         break;
       // da vueltas hasta encontrar el robot
       case 6:
         giro();
+        temp3 = millis();
+        temp4 = millis();
         break;
       }
       vTaskDelay(10 / portTICK_PERIOD_MS);
