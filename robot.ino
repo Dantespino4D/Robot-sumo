@@ -40,7 +40,7 @@ int cal = 15;
 int limCol = 200;
 
 // variables del color predeterminado
-int red = 800;
+int redC = 800;
 int green = 700;
 int blue = 500;
 // se crean los objetos sc_1 y sc_2
@@ -54,7 +54,7 @@ int mot[2][2] = {{26, 25}, {14, 27}};
 NewPing ojos_1(trig_1, echo_1, maxd);
 NewPing ojos_2(trig_2, echo_2, maxd);
 // valores establecidos del limite(pasar mas tarde a variables)
-uint16_t lcr = red, lcg = green, lcb = blue;
+uint16_t lcr = redC, lcg = green, lcb = blue;
 
 // funcion que avanza en la direccion a(por definir en el robot fisico)
 void dir_a() {
@@ -101,7 +101,7 @@ void calCol() {
   const int NUMM = 50;
   for (int i = 0; i < NUMM; i++) {
     // Leer sensor 1
-    tcaSelect(0);
+    scSel(0);
     sc_1.getRawData(&r, &g, &b, &c);
     t_r += r;
     t_g += g;
@@ -339,7 +339,7 @@ void setup() {
     calCol();
   } else {
     // valores predeterminados del sensor de color
-    lcr = red;
+    lcr = redC;
     lcg = green;
     lcb = blue;
   }
