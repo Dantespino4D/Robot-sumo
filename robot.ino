@@ -40,9 +40,9 @@ int cal = 15;
 int limCol = 200;
 
 // variables del color predeterminado
-int r = 800;
-int g = 700;
-int b = 500;
+int red = 800;
+int green = 700;
+int blue = 500;
 // se crean los objetos sc_1 y sc_2
 Adafruit_TCS34725 sc_1 =
     Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_4X);
@@ -54,7 +54,7 @@ int mot[2][2] = {{26, 25}, {14, 27}};
 NewPing ojos_1(trig_1, echo_1, maxd);
 NewPing ojos_2(trig_2, echo_2, maxd);
 // valores establecidos del limite(pasar mas tarde a variables)
-uint16_t lcr = r, lcg = g, lcb = b;
+uint16_t lcr = red, lcg = green, lcb = blue;
 
 // funcion que avanza en la direccion a(por definir en el robot fisico)
 void dir_a() {
@@ -81,7 +81,8 @@ void alto() {
   digitalWrite(mot[1][0], LOW);
   digitalWrite(mot[1][1], LOW);
 }
-
+// funcion que selecciona que sensor de color usar(no me pregunten como
+// funciona)
 void scSel(uint8_t i) {
   if (i > 7)
     return;
@@ -89,6 +90,31 @@ void scSel(uint8_t i) {
   Wire.write(1 << i);
   Wire.endTransmission();
 }
+// aun no hace nada
+void calCol() {
+  // Acumuladores para promediar las lecturas
+  uint32_t t_r = 0;
+  uint32_t t_g = 0;
+  uint32_t t_b = 0;
+
+  uint16_t r, g, b, c;
+  const int NUMM = 50;
+  for (int i = 0; i < NUMM; i++) {
+    // Leer sensor 1
+    tcaSelect(0);
+    sc_1.getRawData(&r, &g, &b, &c);
+    t_r += r;
+    t_g += g;
+    t_b += b;
+
+    delay(20);
+  }
+  // calcula el promedio de las muestras
+  lcr = t_r / NUMM;
+  lcg = t_g / NUMM;
+  lcb = t_b / NUMM;
+}
+
 // TAREA DE LA LOGICA DEL ROBOT
 
 void robot(void *pvParameters) {
@@ -249,9 +275,6 @@ void senColor(void *pvParameters) {
   }
 }
 
-// aun no hace nada
-void calCol() {}
-
 // setup
 void setup() {
   // se crea la alerta
@@ -316,9 +339,9 @@ void setup() {
     calCol();
   } else {
     // valores predeterminados del sensor de color
-    lcr = r;
-    lcg = g;
-    lcb = b;
+    lcr = red;
+    lcg = green;
+    lcb = blue;
   }
   // se crean las tareas
   xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, NULL, 1);
