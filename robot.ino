@@ -3,6 +3,8 @@
 #include <Musica.h>
 #include <NewPing.h>
 #include <Wire.h>
+// direccion del multiplexor
+#define TCAADDR 0x70
 // variables que establecen el tiemṕo
 int tiempo1 = 2000; // tiempo que sigue avanzando despues de dejar de detectar
                     // al rival
@@ -30,11 +32,7 @@ int maxd = 40;
 int trig_2 = 12;
 int echo_2 = 35;
 int led_1 = 19;
-int sda_1 = 21;
-int scl_1 = 22;
 int led_2 = 5;
-int sda_2 = 18;
-int scl_2 = 23;
 int ena_1 = 33; // quizas no se use
 int ena_2 = 32;
 int swi = 4;
@@ -84,6 +82,13 @@ void alto() {
   digitalWrite(mot[1][1], LOW);
 }
 
+void scSel(uint8_t i) {
+  if (i > 7)
+    return;
+  Wire.beginTransmission(TCAADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
 // TAREA DE LA LOGICA DEL ROBOT
 
 void robot(void *pvParameters) {
@@ -214,6 +219,8 @@ void senColor(void *pvParameters) {
     uint16_t r, g, b, c;
     // detecta si el sensor de color funciona bien
     if (estado) {
+      // selecciona sc_1
+      scSel(0);
       // sc_1 lee el color
       sc_1.getRawData(&r, &g, &b, &c);
       // sc_1 determina si el color detectado es el mismo del limite
@@ -225,6 +232,8 @@ void senColor(void *pvParameters) {
     }
     // detecta si sc_2 funciona
     if (estado2) {
+      // selecciona sc_2
+      scSel(1);
       // sc_1 lee el color
       sc_2.getRawData(&r, &g, &b, &c);
       // sc_2 determina si el color detectado es el mismo del limite
@@ -251,7 +260,6 @@ void setup() {
 
   // configuaracion de pines de los sensores de color
   Wire.begin();
-  Wire1.begin(sda_2, scl_2);
 
   // se inicializan los pines
   pinMode(echo_1, INPUT);
@@ -259,11 +267,7 @@ void setup() {
   pinMode(trig_1, OUTPUT);
   pinMode(trig_2, OUTPUT);
   pinMode(led_1, OUTPUT);
-  pinMode(sda_1, OUTPUT);
-  pinMode(scl_1, OUTPUT);
   pinMode(led_2, OUTPUT);
-  pinMode(sda_2, OUTPUT);
-  pinMode(scl_2, OUTPUT);
   pinMode(ena_1, OUTPUT);
   pinMode(ena_2, OUTPUT);
   pinMode(ini, INPUT_PULLUP);
@@ -279,6 +283,8 @@ void setup() {
   digitalWrite(led_1, HIGH);
   digitalWrite(led_2, HIGH);
 
+  // selecciona sc_1
+  scSel(0);
   // verifica el funcionamiento de sc_1
   if (sc_1.begin()) {
     // todo bien
@@ -290,6 +296,9 @@ void setup() {
     // no funciona y desantiva su funcionamiento
     estado = false;
   }
+
+  // selecciona sc_2
+  scSel(1);
   // verifica el funcionamiento de sc_2
   if (sc_2.begin(TCS34725_ADDRESS, &Wire1)) {
     // todo bien
