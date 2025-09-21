@@ -12,8 +12,10 @@ int tiempo2 = 2000; // tiempo que retrocede al detectar el borde
 int banc = 0;
 // alerta del limite
 SemaphoreHandle_t alerta;
+SemaphoreHandle_t alerta2;
 // variables de control
 bool estado = false;
+bool estado2 = false;
 bool start = false;
 int modo = 0;
 bool memo1 = false;
@@ -38,18 +40,23 @@ int ena_2 = 32;
 int swi = 4;
 int cal = 15;
 int limCol = 200;
+
+// variables del color predeterminado
+int r = 800;
+int g = 700;
+int b = 500;
 // se crean los objetos sc_1 y sc_2
 Adafruit_TCS34725 sc_1 =
-    Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+    Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_4X);
 Adafruit_TCS34725 sc_2 =
-    Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+    Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_4X);
 // arreglo de los pines de los puentes h
 int mot[2][2] = {{26, 25}, {14, 27}};
 // se crean objetos ojos_1 y ojos_2
 NewPing ojos_1(trig_1, echo_1, maxd);
 NewPing ojos_2(trig_2, echo_2, maxd);
 // valores establecidos del limite(pasar mas tarde a variables)
-uint16_t lcr = 800, lcg = 700, lcb = 500;
+uint16_t lcr = r, lcg = g, lcb = b;
 
 // funcion que avanza en la direccion a(por definir en el robot fisico)
 void dir_a() {
@@ -119,7 +126,7 @@ void robot(void *pvParameters) {
         modo = 0;
       }
       // si detecta el limite por sc_2
-      else if (false || memo4) {
+      else if (xSemaphoreTake(alerta2, 0) == pdTRUE || memo4) {
         modo = 1;
       }
       // si deja de detectar al robot por ojos 1
@@ -148,12 +155,14 @@ void robot(void *pvParameters) {
       // detiene el movimiento y retrocede en direccion b
       case 0:
         dir_b();
+        digitalWrite(17, HIGH);
         memo3 = true;
         temp4 = millis();
         break;
       // detiene el movimiento y retrocede en direccion a
       case 1:
         dir_a();
+        digitalWrite(16, HIGH);
         memo4 = true;
         temp3 = millis();
         break;
@@ -204,19 +213,29 @@ void senColor(void *pvParameters) {
     // variables de los colores detectados
     uint16_t r, g, b, c;
     // detecta si el sensor de color funciona bien
-    if (!estado) {
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
-      continue;
+    if (estado) {
+      // sc_1 lee el color
+      sc_1.getRawData(&r, &g, &b, &c);
+      // sc_1 determina si el color detectado es el mismo del limite
+      long difCol = abs(r - lcr) + abs(g - lcg) + abs(b - lcb);
+      if (difCol < limCol) {
+        // manda alerta para alejarse del limite
+        xSemaphoreGive(alerta);
+      }
     }
-    // sc_1 lee el color
-    sc_1.getRawData(&r, &g, &b, &c);
-    // sc_1 determina si el color detectado es el mismo del limite
-    long difCol = abs(r - lcr) + abs(g - lcg) + abs(b - lcb);
-    if (difCol < limCol) {
-      // manda alerta para alejarse del limite
-      xSemaphoreGive(alerta);
+    // detecta si sc_2 funciona
+    if (estado2) {
+      // sc_1 lee el color
+      sc_2.getRawData(&r, &g, &b, &c);
+      // sc_2 determina si el color detectado es el mismo del limite
+      long difCol2 = abs(r - lcr) + abs(g - lcg) + abs(b - lcb);
+      if (difCol2 < limCol) {
+        // manda alerta para alejarse del limite
+        xSemaphoreGive(alerta2);
+      }
     }
-    vTaskDelay(20 / portTICK_PERIOD_MS);
+
+    vTaskDelay(5 / portTICK_PERIOD_MS);
     // digitalWrite(19, HIGH);
   }
 }
@@ -228,6 +247,12 @@ void calCol() {}
 void setup() {
   // se crea la alerta
   alerta = xSemaphoreCreateBinary();
+  alerta2 = xSemaphoreCreateBinary();
+
+  // configuaracion de pines de los sensores de color
+  Wire.begin();
+  Wire1.begin(sda_2, scl_2);
+
   // se inicializan los pines
   pinMode(echo_1, INPUT);
   pinMode(echo_2, INPUT);
@@ -258,20 +283,33 @@ void setup() {
   if (sc_1.begin()) {
     // todo bien
     estado = true;
+    digitalWrite(17, HIGH);
+    delay(100);
+    digitalWrite(16, LOW);
   } else {
     // no funciona y desantiva su funcionamiento
     estado = false;
-    // prende el led de sc_1
-    digitalWrite(23, HIGH);
   }
+  // verifica el funcionamiento de sc_2
+  if (sc_2.begin(TCS34725_ADDRESS, &Wire1)) {
+    // todo bien
+    estado2 = true;
+    digitalWrite(16, HIGH);
+    delay(100);
+    digitalWrite(16, LOW);
+  } else {
+    // no funciona y desantiva su funcionamiento
+    estado2 = false;
+  }
+
   // aun no tiene propocito(determinara la calibracion)
   if (digitalRead(cal) == LOW) {
     calCol();
   } else {
     // valores predeterminados del sensor de color
-    lcr = 800;
-    lcg = 700;
-    lcb = 500;
+    lcr = r;
+    lcg = g;
+    lcb = b;
   }
   // se crean las tareas
   xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, NULL, 1);
