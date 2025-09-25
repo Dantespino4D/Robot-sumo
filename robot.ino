@@ -127,7 +127,8 @@ void robot(void *pvParameters) {
     // prende al precionar el boton
     if (digitalRead(ini) == HIGH) {
       start = true;
-      auxilio();
+      // auxilio();
+      delay(5000);
     }
     // inicia
     while (start) {
@@ -313,8 +314,8 @@ void setup() {
     // todo bien
     estado = true;
     digitalWrite(17, HIGH);
-    delay(100);
-    digitalWrite(16, LOW);
+    delay(1000);
+    digitalWrite(17, LOW);
   } else {
     // no funciona y desantiva su funcionamiento
     estado = false;
@@ -323,11 +324,11 @@ void setup() {
   // selecciona sc_2
   scSel(1);
   // verifica el funcionamiento de sc_2
-  if (sc_2.begin(TCS34725_ADDRESS, &Wire1)) {
+  if (sc_2.begin()) {
     // todo bien
     estado2 = true;
     digitalWrite(16, HIGH);
-    delay(100);
+    delay(1000);
     digitalWrite(16, LOW);
   } else {
     // no funciona y desantiva su funcionamiento
