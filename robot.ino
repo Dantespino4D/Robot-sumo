@@ -10,8 +10,6 @@ int tiempo1 = 2000; // tiempo que sigue avanzando despues de dejar de detectar
                     // al rival
 int tiempo2 = 2000; // tiempo que retrocede al detectar el borde
 
-// bandera(no recuerdo que hace)
-int banc = 0;
 // alerta del limite
 SemaphoreHandle_t alerta;
 SemaphoreHandle_t alerta2;
@@ -33,11 +31,10 @@ int trig_2 = 12;
 int echo_2 = 35;
 int led_1 = 19;
 int led_2 = 5;
-int ena_1 = 33; // quizas no se use
-int ena_2 = 32;
-int swi = 4;
 int cal = 15;
 int limCol = 200;
+int ledp_1 = 16;
+int ledp_2 = 17;
 
 // variables del color predeterminado
 int redC = 800;
@@ -56,6 +53,18 @@ NewPing ojos_2(trig_2, echo_2, maxd);
 // valores establecidos del limite(pasar mas tarde a variables)
 uint16_t lcr = redC, lcg = green, lcb = blue;
 
+// funcion para probar el funcionamiento de cosas
+void prueba(int a) {
+  if (a == 0) {
+    digitalWrite(ledp_1, HIGH);
+    delay(1000);
+    digitalWrite(ledp_1, LOW);
+  } else {
+    digitalWrite(ledp_2, HIGH);
+    delay(1000);
+    digitalWrite(ledp_2, LOW);
+  }
+}
 // funcion que avanza en la direccion a(por definir en el robot fisico)
 void dir_a() {
   alto();
@@ -90,7 +99,7 @@ void scSel(uint8_t i) {
   Wire.write(1 << i);
   Wire.endTransmission();
 }
-// aun no hace nada
+// logica de la calibracion
 void calCol() {
   // Acumuladores para promediar las lecturas
   uint32_t t_r = 0;
@@ -119,6 +128,7 @@ void calCol() {
 
 void robot(void *pvParameters) {
   while (1) {
+    // digitalWrite(16, HIGH);
     unsigned long temp1 = 0;
     unsigned long temp2 = 0;
     unsigned long temp3 = 0;
@@ -127,7 +137,6 @@ void robot(void *pvParameters) {
     // prende al precionar el boton
     if (digitalRead(ini) == HIGH) {
       start = true;
-      // auxilio();
       delay(5000);
     }
     // inicia
@@ -187,14 +196,12 @@ void robot(void *pvParameters) {
       // detiene el movimiento y retrocede en direccion b
       case 0:
         dir_b();
-        digitalWrite(17, HIGH);
         memo3 = true;
         temp4 = millis();
         break;
       // detiene el movimiento y retrocede en direccion a
       case 1:
         dir_a();
-        digitalWrite(16, HIGH);
         memo4 = true;
         temp3 = millis();
         break;
@@ -272,7 +279,6 @@ void senColor(void *pvParameters) {
     }
 
     vTaskDelay(5 / portTICK_PERIOD_MS);
-    // digitalWrite(19, HIGH);
   }
 }
 
@@ -298,7 +304,10 @@ void setup() {
   pinMode(swi, INPUT);
   pinMode(cal, INPUT_PULLUP);
   pinMode(23, OUTPUT);
-  // se inicializan los pines de los motores(puentes h)
+  pinMode(16, OUTPUT);
+  pinMode(17, OUTPUT);
+  // digitalWrite(17, HIGH);
+  //  se inicializan los pines de los motores(puentes h)
   pinMode(mot[0][0], OUTPUT);
   pinMode(mot[0][1], OUTPUT);
   pinMode(mot[1][0], OUTPUT);
@@ -313,9 +322,7 @@ void setup() {
   if (sc_1.begin()) {
     // todo bien
     estado = true;
-    digitalWrite(17, HIGH);
-    delay(1000);
-    digitalWrite(17, LOW);
+    prueba(0);
   } else {
     // no funciona y desantiva su funcionamiento
     estado = false;
@@ -327,9 +334,7 @@ void setup() {
   if (sc_2.begin()) {
     // todo bien
     estado2 = true;
-    digitalWrite(16, HIGH);
-    delay(1000);
-    digitalWrite(16, LOW);
+    prueba(1);
   } else {
     // no funciona y desantiva su funcionamiento
     estado2 = false;
@@ -352,4 +357,6 @@ void loop() {
   // DESCRIPCIONES A TOMAR EN CUENTA:
   // ojos_1 y sc_1 en direccion "a"
   // ojos_2 y sc_2 en direccion "b"
+  // eliminar todas la funciones de prueba una vez armado y soldado el circuito
+  // y se verifique que este todo correcto
 }
