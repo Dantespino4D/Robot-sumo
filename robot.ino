@@ -3,16 +3,23 @@
 #include <Musica.h>
 #include <NewPing.h>
 #include <Wire.h>
+
 // direccion del multiplexor
 #define TCAADDR 0x70
+
 // variables que establecen el tiemṕo
 int tiempo1 = 2000; // tiempo que sigue avanzando despues de dejar de detectar
                     // al rival
 int tiempo2 = 2000; // tiempo que retrocede al detectar el borde
 
+// variables que definen limites
+int maxd = 40;    // limite de los sensores ultrasonicos
+int limCol = 200; // tolerancia del color
+
 // alerta del limite
 SemaphoreHandle_t alerta;
 SemaphoreHandle_t alerta2;
+
 // variables de control
 bool estado = false;
 bool estado2 = false;
@@ -22,17 +29,16 @@ bool memo1 = false;
 bool memo2 = false;
 bool memo3 = false;
 bool memo4 = false;
+
 // variables de los pines(y la de distancia maxima)
 int ini = 2;
 int trig_1 = 13;
 int echo_1 = 34;
-int maxd = 40;
 int trig_2 = 12;
 int echo_2 = 35;
 int led_1 = 19;
 int led_2 = 5;
 int cal = 15;
-int limCol = 200;
 int ledp_1 = 16;
 int ledp_2 = 17;
 
@@ -40,16 +46,20 @@ int ledp_2 = 17;
 int redC = 800;
 int green = 700;
 int blue = 500;
+
 // se crean los objetos sc_1 y sc_2
 Adafruit_TCS34725 sc_1 =
     Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_4X);
 Adafruit_TCS34725 sc_2 =
     Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_4X);
+
 // arreglo de los pines de los puentes h
 int mot[2][2] = {{26, 25}, {14, 27}};
+
 // se crean objetos ojos_1 y ojos_2
 NewPing ojos_1(trig_1, echo_1, maxd);
 NewPing ojos_2(trig_2, echo_2, maxd);
+
 // valores establecidos del limite(pasar mas tarde a variables)
 uint16_t lcr = redC, lcg = green, lcb = blue;
 
@@ -58,11 +68,9 @@ void prueba(int a) {
   if (a == 0) {
     digitalWrite(ledp_1, HIGH);
     delay(1000);
-    digitalWrite(ledp_1, LOW);
   } else {
     digitalWrite(ledp_2, HIGH);
     delay(1000);
-    digitalWrite(ledp_2, LOW);
   }
 }
 // funcion que avanza en la direccion a(por definir en el robot fisico)
@@ -128,7 +136,6 @@ void calCol() {
 
 void robot(void *pvParameters) {
   while (1) {
-    // digitalWrite(16, HIGH);
     unsigned long temp1 = 0;
     unsigned long temp2 = 0;
     unsigned long temp3 = 0;
@@ -137,7 +144,7 @@ void robot(void *pvParameters) {
     // prende al precionar el boton
     if (digitalRead(ini) == HIGH) {
       start = true;
-      delay(5000);
+      vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
     // inicia
     while (start) {
@@ -282,6 +289,14 @@ void senColor(void *pvParameters) {
   }
 }
 
+void musica(void *pvParameters) {
+  while (2) {
+    adestes();
+    vTaskDelay(10);
+    c
+  }
+}
+
 // setup
 void setup() {
   // se crea la alerta
@@ -298,24 +313,16 @@ void setup() {
   pinMode(trig_2, OUTPUT);
   pinMode(led_1, OUTPUT);
   pinMode(led_2, OUTPUT);
-  pinMode(ena_1, OUTPUT);
-  pinMode(ena_2, OUTPUT);
   pinMode(ini, INPUT_PULLUP);
-  pinMode(swi, INPUT);
   pinMode(cal, INPUT_PULLUP);
   pinMode(23, OUTPUT);
-  pinMode(16, OUTPUT);
-  pinMode(17, OUTPUT);
-  // digitalWrite(17, HIGH);
+  pinMode(ledp_1, OUTPUT);
+  pinMode(ledp_2, OUTPUT);
   //  se inicializan los pines de los motores(puentes h)
   pinMode(mot[0][0], OUTPUT);
   pinMode(mot[0][1], OUTPUT);
   pinMode(mot[1][0], OUTPUT);
   pinMode(mot[1][1], OUTPUT);
-
-  digitalWrite(led_1, HIGH);
-  digitalWrite(led_2, HIGH);
-
   // selecciona sc_1
   scSel(0);
   // verifica el funcionamiento de sc_1
@@ -352,6 +359,7 @@ void setup() {
   // se crean las tareas
   xTaskCreatePinnedToCore(robot, "robot", 1024, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(senColor, "sensorColor", 2048, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(musica, "musica", 1024, NULL, 1, NULL, 0);
 }
 void loop() {
   // DESCRIPCIONES A TOMAR EN CUENTA:
