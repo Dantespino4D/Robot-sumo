@@ -112,6 +112,14 @@ void Spi::enviar(uint8_t *data, uint16_t size) {
 	//se deshabilitan las interrupciones
 	__disable_irq();
 
+	//desabilitar el SPI
+	LL_SPI_Disable(SPI1);
+
+	//limpiar RX
+	while(LL_SPI_GetRxFIFOLevel(SPI1) != LL_SPI_RX_FIFO_EMPTY){
+		(void)LL_SPI_ReceiveData8(SPI1);
+	}
+
 	//se deshabilita el canal de transmision
 	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
 	LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_2, (uint32_t)data);

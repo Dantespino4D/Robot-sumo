@@ -6,6 +6,8 @@ clean_code.txt
 reporte_cppcheck.txt
 Robot.zip
 strip_comments.py
+update_modes.py
+planos/
 
 # =======================
 # ESP32 / PlatformIO
