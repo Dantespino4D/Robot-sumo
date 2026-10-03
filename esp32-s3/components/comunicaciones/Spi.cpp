@@ -75,10 +75,13 @@ void Spi::armarOrden(int16_t obj_1, int16_t obj_2){
 }
 
 void Spi::enviarRecibir(uint8_t* mensaje, uint8_t* respuesta, size_t size){
+	if(transaccionEnCurso){
+		return;
+	}
 	transmision.length = size * 8;
 	transmision.tx_buffer = mensaje;
 	transmision.rx_buffer = respuesta;
-	esp_err_t err = spi_device_queue_trans(stm32_handle, &transmision, portMAX_DELAY);
+	esp_err_t err = spi_device_queue_trans(stm32_handle, &transmision, 0);
 	if(err == ESP_OK){
 		transaccionEnCurso = true;
 	}else{
@@ -137,12 +140,16 @@ void Spi::recolectar(){
 
 	spi_transaction_t* tran;
 
-	esp_err_t err = spi_device_get_trans_result(stm32_handle, &tran, portMAX_DELAY);
-	if(err != ESP_OK){
+	esp_err_t err = spi_device_get_trans_result(stm32_handle, &tran, 0);
+	if(err == ESP_ERR_TIMEOUT){
+		return;
+	}if(err != ESP_OK){
 		fallos++;
+		transaccionEnCurso = false;
 		return;
 	}else{
 		transaccionEnCurso = false;
+		fallos = 0;
 		procesarRespuesta();
 	}
 }
