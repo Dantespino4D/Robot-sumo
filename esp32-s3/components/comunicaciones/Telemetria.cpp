@@ -22,9 +22,8 @@ Telemetria::Telemetria(MaquinaEstados* e, Mqtt* q, Wifi* w):
 {}
 
 void Telemetria::recopilar(){
-	bool _stall = false;
 	me->datos(&d.estado, &d.estrategia, &d.ciclo, &d.inicio);
-	d.stall = _stall ? 1 : 0;
+	d.stall = me->getEvasion() ? 1 : 0;
 
 	wf->signalW(&d.wifi);
 	d.tiempo = xTaskGetTickCount() * portTICK_PERIOD_MS;

@@ -167,8 +167,6 @@ void Mqtt::configuracion_json(esp_mqtt_event_handle_t evento){
 		extraerM(motores, "pronunciado", "velocidad_pI", "velocidad_pD");
 		extraerM(motores, "maximo", "velocidad_mI", "velocidad_mD");
 		extraerM(motores, "giro", "velocidad_gI", "velocidad_gD");
-		extraerM(motores, "evasion", "velocidad_eI", "velocidad_eD");
-		extraerM(motores, "huida", "velocidad_hI", "velocidad_hD");
 	}
 
 	//se revisa y aplican cambios en la configuracion de los tiempo
@@ -179,8 +177,6 @@ void Mqtt::configuracion_json(esp_mqtt_event_handle_t evento){
 		extraer(tiempos, "retroceso", "tiempos");
 		extraer(tiempos, "recta_star", "tiempos");
 		extraer(tiempos, "giro_star", "tiempos");
-		extraer(tiempos, "t_stall", "tiempos");
-		extraer(tiempos, "evasion", "tiempos");
 	}
 
 	//se revisa y aplican cambios en la configuracion de los limites de los sensores

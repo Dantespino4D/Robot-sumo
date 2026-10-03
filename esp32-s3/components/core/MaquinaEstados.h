@@ -32,8 +32,7 @@ class MaquinaEstados{
 		int tiempo3;
 		int tiempo4;
 		int tiempo5;
-		int tiempo6;
-	private:
+		private:
 		//variables de control
 		volatile int modo;
 		volatile int estrategia;
@@ -41,9 +40,6 @@ class MaquinaEstados{
 		int ini;
 
 		Spi* spi;
-
-		bool stall;
-
 		//variable de la evasion
 		volatile bool evasion;
 
@@ -86,6 +82,8 @@ class MaquinaEstados{
 
 		//metodo que define la evasion
 		void definirEvasion(bool _evasion);
+
+		bool getEvasion() const { return evasion; }
 
 		//se obtiene el ciclo
 		void cicloR(int c, int i);

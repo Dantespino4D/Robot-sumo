@@ -5,8 +5,6 @@ enum Estado {
 	ALTO,
 	DIR_A,
 	DIR_B,
-	EVA_A,
-	EVA_B,
 	ATAQUE_AI,
 	ATAQUE_BI,
 	ATAQUE_AD,

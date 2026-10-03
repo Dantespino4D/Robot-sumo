@@ -22,13 +22,11 @@ MaquinaEstados::MaquinaEstados(int _tiempo2, int _tiempo3, int _tiempo4, int _ti
 	tiempo3(_tiempo3),
 	tiempo4(_tiempo4),
 	tiempo5(_tiempo5),
-	tiempo6(1000),
-	modo(-1),
+	modo(29),
 	estrategia(0),
 	ciclo(0),
 	ini(0),
 	spi(_spi),
-	stall(false),
 	memo_eva(0),
 	memo_TC(0),
 	memo_TL(0),
@@ -69,17 +67,12 @@ void MaquinaEstados::tiempo(){
 		//tiempo de la memoria a largo plazo
     	memo_TL = 0;
     }
-	if (stall && (temp - tempEva >= (unsigned long)tiempo6)) {
-		//tiempo de la evasion
-		stall = false;
-		memo_eva = 0;
-	}
 }
 
 void MaquinaEstados::logica(){
 	//evaluar si esta en curso la maniobra de evacion
 	if(evasion){
-		spi->armarOrden(vels_1[ALTO], vels_2[ALTO]);
+		spi->armarOrden(0, 0);
 		return;
 	}
 	tiempo();
@@ -95,7 +88,6 @@ void MaquinaEstados::nvsLeer(){
 	tiempo3 = nvs.leer("tof_largo_plazo",tiempo3);
 	tiempo4 = nvs.leer("recta_star",tiempo4);
 	tiempo5 = nvs.leer("giro_star",tiempo5);
-	tiempo6 = nvs.leer("evasion", tiempo6);
 	estrategia = nvs.leer("estrategia",estrategia);
 }
 

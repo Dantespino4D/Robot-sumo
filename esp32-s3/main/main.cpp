@@ -329,11 +329,6 @@ void begin_hardware() {
 	vels_1[MAX_B] = -vel.leer("velocidad_mI", vels_1[MAX_A]);
 	vels_2[MAX_B] = -vel.leer("velocidad_mD", vels_2[MAX_A]);
 
-	//velocidades de evasion
-	vels_1[EVA_A] = vel.leer("velocidad_eI", vels_1[EVA_A]);
-	vels_2[EVA_A] = vel.leer("velocidad_eD", vels_2[EVA_A]);
-	vels_1[EVA_B] = -vel.leer("velocidad_eI", vels_1[EVA_A]);
-	vels_2[EVA_B] = -vel.leer("velocidad_eD", vels_2[EVA_A]);
 
 	//velocidades del giro de busqueda
 	vels_1[GIRO] = vel.leer("velocidad_gI", vels_1[GIRO]);
