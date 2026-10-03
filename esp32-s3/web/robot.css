@@ -1,0 +1,452 @@
+:root {
+  --bg-color: #0d0f1a;         /* Dark blueish-black background */
+  --panel-bg: #1a1b35;         /* Deep purple-blue for panels */
+  --text-main: #e0e0ff;        /* Soft icy blue/white text */
+  --text-dim: #8b8fb5;         /* Dimmed text */
+  --accent: #9d4edd;           /* Vibrant purple accent */
+  --accent-hover: #7b2cbf;     /* Darker purple for hover */
+  --chasis-bg: #24254a;        /* Chassis center background */
+  --border-color: #3b3c6e;     /* Borders */
+  
+  --danger: #ff4d4d;           /* Red for alerts/detection */
+  --danger-dim: rgba(255, 77, 77, 0.2);
+  --safe: #00e676;             /* Green for safe/normal */
+  --safe-dim: rgba(0, 230, 118, 0.2);
+  --warning: #ffb703;          /* Yellow for stall */
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: var(--accent);
+  margin-top: 0;
+}
+
+/* Layout: Side by Side on desktop */
+.dashboard-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Config Form Styling */
+#configuracion, #telemetry {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  flex: 1 1 400px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+}
+
+fieldset {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+}
+
+legend {
+  color: var(--accent);
+  font-weight: bold;
+  padding: 0 5px;
+}
+
+label {
+  display: block;
+  font-size: 0.9em;
+  margin-top: 8px;
+  color: var(--text-dim);
+}
+
+input[type="number"], select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  background-color: #111226;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 4px;
+  outline: none;
+}
+
+input[type="number"]:focus, select:focus {
+  border-color: var(--accent);
+}
+
+button#aplicar {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button#aplicar:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Group fields that were originally adjacent */
+.normal, .ataque, .pronunciado, .maxima, .giro, .evasion, .huida {
+  display: flex;
+  gap: 10px;
+}
+.normal > *, .ataque > *, .pronunciado > *, .maxima > *, .giro > *, .evasion > *, .huida > * {
+  flex: 1;
+}
+
+/* ==================================
+   TELEMETRY HUD STYLING
+   ================================== */
+#telemetry h2 {
+  margin-top: 0;
+  text-align: center;
+  color: var(--text-main);
+}
+
+.fsm-status {
+  display: flex;
+  justify-content: space-around;
+  background-color: rgba(0,0,0,0.2);
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-family: monospace;
+  font-size: 1.1em;
+  border: 1px solid var(--border-color);
+}
+
+.fsm-status .label {
+  color: var(--text-dim);
+  font-size: 0.8em;
+}
+
+.fsm-status .val {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.robot-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+}
+
+/* ToF Rows */
+.tof-row {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+}
+
+.tof-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+}
+
+.tof-label {
+  font-size: 0.8em;
+  font-family: monospace;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.tof-label .dist {
+  display: block;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.tof-bar-container {
+  width: 20px;
+  height: 80px;
+  background-color: #111226;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* The bar fills from the robot's center OUTWARDS */
+.tof-bar {
+  width: 100%;
+  height: 0%;
+  background-color: var(--safe);
+  position: absolute;
+  transition: height 0.1s linear, background-color 0.2s;
+}
+
+/* Front A bars fill bottom to top */
+.front-a .tof-bar {
+  bottom: 0; 
+}
+/* Front B bars fill top to bottom */
+.front-b .tof-bar {
+  top: 0;
+}
+
+.tof-bar.detected {
+  background-color: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+
+/* Chassis */
+.chasis {
+  width: 220px;
+  height: 220px;
+  background-color: var(--chasis-bg);
+  border: 3px solid var(--border-color);
+  border-radius: 12px;
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* TCRT Sensors */
+.tcrt {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--safe);
+  border: 2px solid #000;
+  position: absolute;
+  transition: background-color 0.1s, box-shadow 0.1s;
+}
+
+.tcrt.fl { top: 10px; left: 10px; }
+.tcrt.fr { top: 10px; right: 10px; }
+.tcrt.bl { bottom: 10px; left: 10px; }
+.tcrt.br { bottom: 10px; right: 10px; }
+
+.tcrt.line-detected {
+  background-color: #ffffff;
+  box-shadow: 0 0 10px #ffffff, 0 0 20px var(--danger);
+}
+
+/* Tank Drive Motors */
+.motor-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: center;
+  position: relative;
+}
+
+.pwm-bar-wrap {
+  width: 30px;
+  height: 160px; /* 80px for pos, 80px for neg */
+  background-color: #111226;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  position: relative;
+}
+
+/* A middle line marking zero */
+.pwm-bar-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--text-dim);
+  transform: translateY(-50%);
+}
+
+.pwm-fill {
+  position: absolute;
+  width: 100%;
+  background-color: var(--accent);
+  transition: height 0.1s linear, background-color 0.2s;
+}
+
+/* Positive PWM fills from center UP */
+.pwm-fill.pos {
+  bottom: 50%;
+  height: 0%; 
+}
+
+/* Negative PWM fills from center DOWN */
+.pwm-fill.neg {
+  top: 50%;
+  height: 0%;
+}
+
+.pwm-val {
+  font-family: monospace;
+  font-size: 0.9em;
+  margin-top: 5px;
+  width: 40px;
+  text-align: center;
+}
+
+.stall-alert {
+  position: absolute;
+  top: 5px;
+  font-size: 0.7em;
+  font-weight: bold;
+  background-color: var(--warning);
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.stall-alert.active {
+  opacity: 1;
+  animation: blink 0.3s alternate infinite;
+}
+
+@keyframes blink {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+/* ==================================
+   MODERN FORM STYLING (COLLAPSIBLES & SLIDERS)
+   ================================== */
+.modern-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modern-form h2 {
+  color: var(--accent);
+  margin-top: 0;
+  text-align: center;
+}
+
+.config-group {
+  background-color: #111226;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.config-group summary {
+  padding: 12px 15px;
+  background-color: var(--panel-bg);
+  color: var(--text-main);
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.config-group summary:hover {
+  background-color: #24254a;
+}
+
+.config-group[open] summary {
+  border-bottom: 1px solid var(--accent);
+}
+
+.input-row, .slider-row {
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slider-row label {
+  color: var(--text-dim);
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider-group input[type="number"] {
+  width: 80px;
+  margin-top: 0;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--safe);
+  color: #000;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.3s, bottom 0.3s;
+}
+
+.toast.hidden {
+  opacity: 0;
+  bottom: -50px;
+  pointer-events: none;
+}

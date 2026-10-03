@@ -1,137 +1,263 @@
 <html>
 <head>
+	<meta charset="UTF-8">
 	<link rel="stylesheet" href="robot.css">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="robot.js" defer></script>
 </head>
 <body>
-<h1>Robot Sumo</h1>
-	<form id="configuracion">
-<fieldset>
-	<legend>Configuración</legend>
-		<fieldset>
-			<legend>Motores</legend>
-			<label for="stall">Umbral de stall</label>
-			<input type="number" id="stall" name="stall" min="0" max="3" value="2">
-			<fieldset>
-				<legend>Velocidades</legend>
-				<div class="normal">
-				<label for="normal_i">Velocidad normal izquierda</label>
-					<input type="number" id="normal_i" name="normal_i" step="50" min="-1023" max="1023" value="700">
-				<label for="normal_d">Velocidad normal derecha</label>
-					<input type="number" id="normal_d" name="normal_d" step="50" min="-1023" max="1023" value="700">
+<h1>Robot Sumo Dashboard</h1>
+<div class="dashboard-wrapper">
+		<form id="configuracion" class="modern-form">
+		<h2>Configuración</h2>
+		
+		<details class="config-group" open>
+			<summary>Motores y Velocidades</summary>
+			<div class="input-row">
+				<label for="stall">Umbral de stall</label>
+				<input type="number" id="stall" name="stall" min="0" max="3" value="2">
+			</div>
+			
+			<div class="slider-row">
+				<label>Velocidad normal (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_normal_i" min="-1023" max="1023" step="10" value="700">
+					<input type="number" id="normal_i" name="normal_i" min="-1023" max="1023" value="700">
 				</div>
-				<div class="ataque">
-				<label for="ataque_i">Velocidad de ataque izquierda</label>
-					<input type="number" id="ataque_i" name="ataque_i" step="50" min="-1023" max="1023" value="950">
-				<label for="ataque_d">Velocidad de ataque derecha</label>
-					<input type="number" id="ataque_d" name="ataque_d" step="50" min="-1023" max="1023" value="800">
+				<div class="slider-group">
+					<input type="range" id="range_normal_d" min="-1023" max="1023" step="10" value="700">
+					<input type="number" id="normal_d" name="normal_d" min="-1023" max="1023" value="700">
 				</div>
-				<div class="pronunciado">
-				<label for="pronunciado_i">Velocidad de ataque pronunciado izquierda</label>
-					<input type="number" id="pronunciado_i" name="pronunciado_i" step="50" min="-1023" max="1023" value="950">
-				<label for="pronunciado_d">Velocidad de ataque pronunciado derecha</label>
-					<input type="number" id="pronunciado_d" name="pronunciado_d" step="50" min="-1023" max="1023" value="600">
+			</div>
+
+			<div class="slider-row">
+				<label>Velocidad de ataque (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_ataque_i" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="ataque_i" name="ataque_i" min="-1023" max="1023" value="950">
 				</div>
-				<div class="maxima">
-				<label for="max_i">Velocidad máxima izquierda</label>
-					<input type="number" id="max_i" name="max_i" step="50" min="-1023" max="1023" value="1023">
-				<label for="max_d">Velocidad máxima derecha</label>
-					<input type="number" id="max_d" name="max_d" step="50" min="-1023" max="1023" value="1023">
+				<div class="slider-group">
+					<input type="range" id="range_ataque_d" min="-1023" max="1023" step="10" value="800">
+					<input type="number" id="ataque_d" name="ataque_d" min="-1023" max="1023" value="800">
 				</div>
-				<div class="giro">
-				<label for="giro_i">Velocidad de giro izquierda</label>
-					<input type="number" id="giro_i" name="giro_i" step="50" min="-1023" max="1023" value="950">
-				<label for="giro_d">Velocidad de giro derecha</label>
-					<input type="number" id="giro_d" name="giro_d" step="50" min="-1023" max="1023" value="-800">
+			</div>
+
+			<div class="slider-row">
+				<label>Ataque pronunciado (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_pronunciado_i" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="pronunciado_i" name="pronunciado_i" min="-1023" max="1023" value="950">
 				</div>
-				<div class="evasion">
-				<label for="evasion_i">Velocidad de evasion izquierda</label>
-					<input type="number" id="evasion_i" name="evasion_i" step="50" min="-1023" max="1023" value="950">
-				<label for="evasion_d">Velocidad de evasion derecha</label>
-					<input type="number" id="evasion_d" name="evasion_d" step="50" min="-1023" max="1023" value="200">
+				<div class="slider-group">
+					<input type="range" id="range_pronunciado_d" min="-1023" max="1023" step="10" value="600">
+					<input type="number" id="pronunciado_d" name="pronunciado_d" min="-1023" max="1023" value="600">
 				</div>
-				<div class="huida">
-				<label for="huida_i">Velocidad de huida izquierda</label>
-					<input type="number" id="huida_i" name="huida_i" step="50" min="-1023" max="1023" value="950">
-				<label for="huida_d">Velocidad de huida derecha</label>
-					<input type="number" id="huida_d" name="huida_d" step="50" min="-1023" max="1023" value="950">
+			</div>
+
+			<div class="slider-row">
+				<label>Velocidad máxima (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_max_i" min="-1023" max="1023" step="10" value="1023">
+					<input type="number" id="max_i" name="max_i" min="-1023" max="1023" value="1023">
+				</div>
+				<div class="slider-group">
+					<input type="range" id="range_max_d" min="-1023" max="1023" step="10" value="1023">
+					<input type="number" id="max_d" name="max_d" min="-1023" max="1023" value="1023">
+				</div>
+			</div>
+
+			<div class="slider-row">
+				<label>Velocidad de giro (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_giro_i" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="giro_i" name="giro_i" min="-1023" max="1023" value="950">
+				</div>
+				<div class="slider-group">
+					<input type="range" id="range_giro_d" min="-1023" max="1023" step="10" value="-800">
+					<input type="number" id="giro_d" name="giro_d" min="-1023" max="1023" value="-800">
+				</div>
+			</div>
+
+			<div class="slider-row">
+				<label>Velocidad de evasión (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_evasion_i" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="evasion_i" name="evasion_i" min="-1023" max="1023" value="950">
+				</div>
+				<div class="slider-group">
+					<input type="range" id="range_evasion_d" min="-1023" max="1023" step="10" value="200">
+					<input type="number" id="evasion_d" name="evasion_d" min="-1023" max="1023" value="200">
+				</div>
+			</div>
+
+			<div class="slider-row">
+				<label>Velocidad de huida (I / D)</label>
+				<div class="slider-group">
+					<input type="range" id="range_huida_i" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="huida_i" name="huida_i" min="-1023" max="1023" value="950">
+				</div>
+				<div class="slider-group">
+					<input type="range" id="range_huida_d" min="-1023" max="1023" step="10" value="950">
+					<input type="number" id="huida_d" name="huida_d" min="-1023" max="1023" value="950">
+				</div>
+			</div>
+		</details>
+
+		<details class="config-group">
+			<summary>Tiempos (ms)</summary>
+			<div class="input-row">
+				<label for="memoria_CT">Memoria corto plazo ToFs</label>
+				<input type="number" id="memoria_CT" name="memoria_CT" step="50" min="0" max="1000" value="250">
+			</div>
+			<div class="input-row">
+				<label for="memoria_LT">Memoria largo plazo ToFs</label>
+				<input type="number" id="memoria_LT" name="memoria_LT" step="50" min="1000" max="10000" value="2000">
+			</div>
+			<div class="input-row">
+				<label for="retroceso">Tiempo de retroceso</label>
+				<input type="number" id="retroceso" name="retroceso" step="50" min="0" max="10000" value="400">
+			</div>
+			<div class="input-row">
+				<label for="recta_estrella">Avance búsqueda estrella</label>
+				<input type="number" id="recta_estrella" name="recta_estrella" step="50" min="0" max="10000" value="2000">
+			</div>
+			<div class="input-row">
+				<label for="giro_estrella">Giro búsqueda estrella</label>
+				<input type="number" id="giro_estrella" name="giro_estrella" step="50" min="0" max="10000" value="500">
+			</div>
+			<div class="input-row">
+				<label for="T_stall">Tiempo de stall</label>
+				<input type="number" id="T_stall" name="T_stall" step="50" min="0" max="10000" value="250">
+			</div>
+			<div class="input-row">
+				<label for="evasion">Tiempo de evasión</label>
+				<input type="number" id="evasion" name="evasion" step="50" min="0" max="10000" value="1000">
+			</div>
+		</details>
+
+		<details class="config-group">
+			<summary>Sensores (Umbrales)</summary>
+			<div class="slider-row single">
+				<label>Distancia máxima detección (mm)</label>
+				<div class="slider-group">
+					<input type="range" id="range_distancia_maxima" min="0" max="1000" step="10" value="400">
+					<input type="number" id="distancia_maxima" name="distancia_maxima" min="0" max="1000" value="400">
+				</div>
+			</div>
+			<div class="slider-row single">
+				<label>Umbral detección línea TCRT</label>
+				<div class="slider-group">
+					<input type="range" id="range_umbral_linea" min="0" max="1000" step="5" value="50">
+					<input type="number" id="umbral_linea" name="umbral_linea" min="0" max="1000" value="50">
+				</div>
+			</div>
+		</details>
+
+		<details class="config-group">
+			<summary>Sistema</summary>
+			<div class="input-row">
+				<label for="modo">Modo de funcionamiento</label>
+				<select id="modo" name="modo">
+					<option value="0">Prueba</option>
+					<option value="1">Combate</option>
+				</select>
+			</div>
+			<div class="input-row">
+				<label for="monitor">Monitor Serial</label>
+				<select id="monitor" name="monitor">
+					<option value="0">Desactivado</option>
+					<option value="1">Solo Errores</option>
+					<option value="2">Solo informacion</option>
+					<option value="3">Todo</option>
+				</select>
+			</div>
+			<div class="input-row">
+				<label for="estrategia">Estrategia de combate</label>
+				<select id="estrategia" name="estrategia">
+					<option value="0">Estrategia prototipo</option>
+					<option value="1">Estrategia 1</option>
+					<option value="2">Estrategia 2</option>
+				</select>
+			</div>
+		</details>
+
+		<button type="submit" id="aplicar">Guardar y Enviar al Robot</button>
+	</form>
+
+	<div id="toast" class="toast hidden">Configuración Guardada</div>
+
+
+	<div id="telemetry">
+		<h2>Telemetría (FSM & Sensores)</h2>
+		<div class="fsm-status">
+			<div><span class="label">ESTADO ACTUAL:</span> <span class="val" id="fsm-state">IDLE</span></div>
+			<div><span class="label">ESTRATEGIA:</span> <span class="val" id="fsm-strategy">--</span></div>
+			<div><span class="label">CICLO:</span> <span class="val" id="fsm-cycletime">0 ms</span></div>
+		</div>
+
+		<div class="robot-hud">
+			<!-- Frontal A (Superior) -->
+			<div class="tof-row front-a">
+				<div class="tof-item">
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-ai"></div></div>
+					<div class="tof-label">AI <span class="dist" id="dist-ai">--</span></div>
+				</div>
+				<div class="tof-item">
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-ac"></div></div>
+					<div class="tof-label">AC <span class="dist" id="dist-ac">--</span></div>
+				</div>
+				<div class="tof-item">
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-ad"></div></div>
+					<div class="tof-label">AD <span class="dist" id="dist-ad">--</span></div>
+				</div>
+			</div>
+
+			<!-- Chasis central con TCRT y PWM -->
+			<div class="chasis">
+				<!-- Esquinas TCRT -->
+				<div class="tcrt fl" id="tcrt-fl"></div>
+				<div class="tcrt fr" id="tcrt-fr"></div>
+				<div class="tcrt bl" id="tcrt-bl"></div>
+				<div class="tcrt br" id="tcrt-br"></div>
+
+				<!-- Tank Drive: Izquierdo y Derecho -->
+				<div class="motor-track left">
+					<div class="stall-alert" id="stall-l">STALL</div>
+					<div class="pwm-bar-wrap">
+						<div class="pwm-fill pos" id="pwm-l-pos"></div>
+						<div class="pwm-fill neg" id="pwm-l-neg"></div>
 					</div>
-				</fieldset>
-		</fieldset>
-		<fieldset>
-			<legend>Tiempos</legend>
-			<div class="tiempo_memiria corto_plazo">
-			<label for="memoria_CT">Memoria corto plazo ToFs</label>
-			<input type="number" id="memoria_CT" name="memoria_CT" step="50" min="0" max="1000" value="250">
+					<div class="pwm-val" id="val-pwm-l">0</div>
+				</div>
+
+				<div class="motor-track right">
+					<div class="stall-alert" id="stall-r">STALL</div>
+					<div class="pwm-bar-wrap">
+						<div class="pwm-fill pos" id="pwm-r-pos"></div>
+						<div class="pwm-fill neg" id="pwm-r-neg"></div>
+					</div>
+					<div class="pwm-val" id="val-pwm-r">0</div>
+				</div>
 			</div>
-			<div class="tiempo_memoria largo_plazo">
-			<label for="memoria_LT">Memoria largo plazo ToFs</label>
-			<input type="number" id="memoria_LT" name="memoria_LT" step="50" min="1000" max="10000" value="2000">
+
+			<!-- Frontal B (Inferior) -->
+			<div class="tof-row front-b">
+				<div class="tof-item">
+					<div class="tof-label">BI <span class="dist" id="dist-bi">--</span></div>
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-bi"></div></div>
+				</div>
+				<div class="tof-item">
+					<div class="tof-label">BC <span class="dist" id="dist-bc">--</span></div>
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-bc"></div></div>
+				</div>
+				<div class="tof-item">
+					<div class="tof-label">BD <span class="dist" id="dist-bd">--</span></div>
+					<div class="tof-bar-container"><div class="tof-bar" id="bar-bd"></div></div>
+				</div>
 			</div>
-			<div class="tiempo_retroceso">
-			<label for="retroceso">Tiempo de retroceso</label>
-			<input type="number" id="retroceso" name="retroceso" step="50" min="0" max="10000" value="400">
-			</div>
-			<div class="tiempo_avance_estrella">
-			<label for="recta_estrella">Tiempo de avance en busqueda estrella</label>
-			<input type="number" id="recta_estrella" name="recta_estrella" step ="50" min="0" max="10000" value="2000">
-			</div>
-			<div class="tiempo_giro">
-			<label for="giro_estrella">Tiempo de giro en busqueda estrella</label>
-			<input type="number" id="giro_estrella" name="giro_estrella" step="50" min="0" max="10000" value="500">
-			</div>
-			<div class="tiempo_stall">
-			<label for="T_stall">Tiempo de stall</label>
-			<input type="number" id="T_stall" name="T_stall" step="50" min="0" max="10000" value="250">
-			</div>
-			<div class="tiempo_evasion">
-			<label for="evasion">Tiempo de evasion</label>
-			<input type="number" id="evasion" name="evasion" step="50" min="0" max="10000" value="1000">
-			</div>
-		</fieldset>
-		<fieldset>
-			<legend>Sensores</legend>
-			<div class="distancia_maxima">
-			<label for="distancia_maxima">Distancia máxima para detectar oponente</label>
-			<input type="number" id="distancia_maxima" name="distancia_maxima" min="0" max="1000" value="400">
-			</div>
-			<div class="umbral_linea">
-			<label for="umbral_linea">Umbral para detección de línea</label>
-			<input type="number" id="umbral_linea" name="umbral_linea" min="0" max="1000" value="50">
-			</div>
-		</fieldset>
-		<fieldset>
-			<legend>Sistema</legend>
-			<div class="modo">
-			<label for="modo">Modo de funcionamiento</label>
-			<select id="modo" name="modo">
-				<option value="0">Prueba</option>
-				<option value="1">Combate</option>
-			</select>
-			</div>
-			<div class="nivel_log">
-			<label for="monitor">Monitor Serial</label>
-			<select id="monitor" name="monitor">
-				<option value="0">Desactivado</option>
-				<option value="1">Solo Errores</option>
-				<option value="2">Solo informacion</option>
-				<option value="3">Todo</option>
-			</select>
-			</div>
-			<div class="estrategia">
-			<label for="estrategia">Estrategia de combate</label>
-			<select id="estrategia" name="estrategia">
-				<option value="0">Estrategia prototipo</option>
-				<option value="1">Estrategia 1</option>
-				<option value="2">Estrategia 2</option>
-			</select>
-			</div>
-		</fieldset>
-</fieldset>
-<fieldset>
-	<legend>Aplicar</legend>
-	<button type="submit" id="aplicar">Aplicar configuración</button>
-</fieldset>
-</form>
+		</div> <!-- .robot-hud -->
+	</div> <!-- #telemetry -->
+
+</div> <!-- .dashboard-wrapper -->
 </body>
 </html>
