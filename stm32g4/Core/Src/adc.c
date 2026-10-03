@@ -122,7 +122,15 @@ void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
+	//aplicar el AWD a los canales de los DRV8871
+	ADC1->AWD2CR = (1 << 3) | (1 << 5) | (1 << 6) | (1 << 7);
 
+	//fijar el limite superior de corriente
+	ADC1->TR2 = (3800 << ADC_TR2_HT2_Pos) | (0 << ADC_TR2_LT2_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC1->IER |= ADC_IER_AWD2IE;
+	NVIC_EnableIRQ(ADC1_2_IRQn);
   /* USER CODE END ADC1_Init 2 */
 
 }

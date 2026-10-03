@@ -149,7 +149,6 @@ void Spi::recolectar(){
 		return;
 	}else{
 		transaccionEnCurso = false;
-		fallos = 0;
 		procesarRespuesta();
 	}
 }

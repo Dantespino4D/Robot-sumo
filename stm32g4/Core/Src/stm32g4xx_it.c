@@ -49,12 +49,24 @@
 extern volatile uint32_t velObjetivos;
 extern volatile uint16_t adc_buffer[5];
 static uint32_t batFiltrada = 0;
+//tiempo
 uint64_t ms = 0;
+
+//variables de la evacion de mimite
 uint64_t tiempo = 0;
 uint16_t TRetroceso = 1000;
-
 uint8_t evasion = 0;
 
+//variables de la evacion de stall
+volatile uint32_t tiempo_st = 0;
+uint16_t TStall = 250;
+volatile uint8_t stall = 0;
+
+//variables de la direccion del stall
+volatile uint8_t stall_dir1 = 0;
+volatile uint8_t stall_dir2 = 0;
+
+//variables de los comparadores
 uint8_t tcrt1 = 0;
 uint8_t tcrt2 = 0;
 uint8_t tcrt3 = 0;
@@ -405,6 +417,56 @@ void TIM6_DAC_IRQHandler(void)
 			return;
 		}
 
+		if(stall == 1) {
+			//desactibar el AWD
+			ADC1->IER &= ~ADC_IER_AWD2IE;
+
+			//ejecutamos la maniobra
+			if((ms - tiempo_st) <= TStall) {
+				//accion de retroceso direccion opuesta
+				if (stall_dir1 > 0) {
+					TIM1->CCR1 = stall_dir1;
+					TIM1->CCR2 = 0;
+				} else if (stall_dir1 < 0) {
+					TIM1->CCR1 = 0;
+					TIM1->CCR2 = -stall_dir1;
+				} else {
+					TIM1->CCR1 = 1023;
+					TIM1->CCR2 = 1023;
+				}
+
+				if (stall_dir2 > 0) {
+					TIM1->CCR3 = stall_dir2;
+					TIM1->CCR4 = 0;
+				} else if (stall_dir2 < 0) {
+					TIM1->CCR3 = 0;
+					TIM1->CCR4 = -stall_dir2;
+				} else {
+					TIM1->CCR3 = 1023;
+					TIM1->CCR4 = 1023;
+				}
+			}else{
+				//termino la maniobra
+				stall = 0;
+				velActual_1 = 0;
+				velActual_2 = 0;
+				v1_obj = 0;
+				v2_obj = 0;
+
+				//frenamos el robot esperando ordenes del esp32
+				TIM1->CCR1 = 1023;
+				TIM1->CCR2 = 1023;
+				TIM1->CCR3 = 1023;
+				TIM1->CCR4 = 1023;
+
+				//reactivamos el AWD y limpiamos la bandera
+				ADC1->ISR = ADC_ISR_AWD2;
+				ADC1->IER |= ADC_IER_AWD2IE;
+			}
+			LL_TIM_EnableAllOutputs(TIM1);
+			return;
+		}
+
 		GPIOC->BSRR = (GPIO_PIN_9 << 16U);
 
 		//verificar si esta sobre el borde
@@ -561,6 +623,29 @@ void EXTI4_IRQHandler(void)
 
 		//reactivamos el canal
 		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+	}
+}
+
+void ADC1_2_IRQHandler(void)
+{
+	//validamos si hubo stall
+	if(ADC1->ISR & ADC_ISR_AWD2){
+		//accion de proteccion por sobrevoltaje
+		TIM1->EGR |= TIM_EGR_BG;
+
+		//verificar estado actual
+		if (stall == 0) {
+			//activamos la evasion del stall
+			stall = 1;
+			tiempo_st = ms;
+			//notificamos al esp32
+			GPIOC->BSRR = GPIO_PIN_9;
+			//determinar la direccion del stall
+			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
+			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
+		}
+		//limpiar la bandera
+		ADC1->ISR = ADC_ISR_AWD2;
 	}
 }
 /* USER CODE END 1 */
