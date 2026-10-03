@@ -1,54 +1,51 @@
-const maxToF = 1200; // Máximo rango confiable VL53L1X
-
 const telemetryState = {
   tof: { ai: 800, ac: 800, ad: 800, bi: 800, bc: 800, bd: 800 },
   tcrt: { fl: false, fr: false, bl: false, br: false },
   motors: { left: 0, right: 0, stallL: false, stallR: false },
-  fsm: { state: "IDLE", strategy: "Estrategia prototipo", cycleTime: 0 }
+  fsm: { state: "IDLE", strategy: "Estrategia prototipo", cycleTime: 0 },
+  storage: { used: 153600, total: 1048576 }, // Mock 1MB partition
+  mqttConnected: false, // Estado de conexion a TIG (Orange Pi)
+  score: { wins: 0, losses: 0 }, // Marcador del torneo (Mejor de 3)
+  battery: 8.4 // Voltaje de la batería
 };
 
+const mockNvsProfiles = {}; // Simulador de la memoria NVS del ESP32
+
+
 // ==========================================
-// RENDER UI
+// ACTUALIZAR INTERFAZ
 // ==========================================
 function updateTelemetryUI() {
-  const triggerDist = parseInt(document.getElementById('distancia_maxima').value) || 400;
-
-  // 1. ToFs
-  const tofs = ['ai', 'ac', 'ad', 'bi', 'bc', 'bd'];
-  tofs.forEach(id => {
+  // 1. Sensores ToF
+  ['ai', 'ac', 'ad', 'bi', 'bc', 'bd'].forEach(id => {
     const dist = telemetryState.tof[id];
+    document.getElementById(`dist-${id}`).textContent = dist;
+    
     const bar = document.getElementById(`bar-${id}`);
-    const distText = document.getElementById(`dist-${id}`);
-    
-    distText.textContent = dist + ' mm';
-    
-    // Calcular altura (inverso: menor distancia = barra más llena)
-    let percent = 0;
-    if (dist <= maxToF) {
-      percent = 100 - (dist / maxToF) * 100;
-    }
+    const maxToF = 1200; // asumiendo 1200mm de rango máximo visual
+    let percent = (dist / maxToF) * 100;
+    if (percent > 100) percent = 100;
     bar.style.height = `${percent}%`;
 
-    // Conmutación de detección
-    if (dist <= triggerDist) {
-      bar.classList.add('detected');
+    // Cambiar color a rojo si está muy cerca (<200mm)
+    if (dist < 200) {
+      bar.style.backgroundColor = 'var(--danger)';
     } else {
-      bar.classList.remove('detected');
+      bar.style.backgroundColor = 'var(--accent)';
     }
   });
 
-  // 2. TCRT
-  const tcrts = ['fl', 'fr', 'bl', 'br'];
-  tcrts.forEach(id => {
+  // 2. Sensores TCRT (Piso)
+  ['fl', 'fr', 'bl', 'br'].forEach(id => {
     const el = document.getElementById(`tcrt-${id}`);
     if (telemetryState.tcrt[id]) {
-      el.classList.add('line-detected');
+      el.classList.add('active'); // detecta blanco
     } else {
-      el.classList.remove('line-detected');
+      el.classList.remove('active');
     }
   });
 
-  // 3. Motores
+  // 3. Motores PWM y Stall
   const updateMotor = (side, pwm, stall) => {
     const posBar = document.getElementById(`pwm-${side}-pos`);
     const negBar = document.getElementById(`pwm-${side}-neg`);
@@ -57,8 +54,8 @@ function updateTelemetryUI() {
 
     valText.textContent = pwm;
 
-    let percent = (Math.abs(pwm) / 1023) * 100;
-    if (percent > 100) percent = 100;
+    let percent = (Math.abs(pwm) / 1023) * 50; // Max 50% of total bar height
+    if (percent > 50) percent = 50;
 
     if (pwm >= 0) {
       posBar.style.height = `${percent}%`;
@@ -70,8 +67,12 @@ function updateTelemetryUI() {
 
     if (stall) {
       stallAlert.classList.add('active');
+      posBar.style.backgroundColor = 'var(--danger)';
+      negBar.style.backgroundColor = 'var(--danger)';
     } else {
       stallAlert.classList.remove('active');
+      posBar.style.backgroundColor = 'var(--accent)';
+      negBar.style.backgroundColor = 'var(--accent)';
     }
   };
 
@@ -79,51 +80,158 @@ function updateTelemetryUI() {
   updateMotor('r', telemetryState.motors.right, telemetryState.motors.stallR);
 
   // 4. Máquina de Estados
-  document.getElementById('fsm-state').textContent = telemetryState.fsm.state;
-  document.getElementById('fsm-strategy').textContent = telemetryState.fsm.strategy;
-  document.getElementById('fsm-cycletime').textContent = telemetryState.fsm.cycleTime + ' ms';
+  const stateEl = document.getElementById('fsm-state');
+  if (stateEl) {
+    stateEl.textContent = telemetryState.fsm.state;
+    stateEl.title = telemetryState.fsm.state; // Permite ver el texto completo al poner el ratón encima
+  }
+  
+  const strategyEl = document.getElementById('fsm-strategy');
+  if (strategyEl) {
+    strategyEl.textContent = telemetryState.fsm.strategy;
+    strategyEl.title = telemetryState.fsm.strategy;
+  }
+
+  const cycleEl = document.getElementById('fsm-cycletime');
+  if (cycleEl) {
+    cycleEl.textContent = telemetryState.fsm.cycleTime + ' ms';
+  }
+
+  // 5. Almacenamiento LittleFS
+  const storageText = document.getElementById('storage-text');
+  const storageFill = document.getElementById('storage-fill');
+  if (storageText && storageFill) {
+    const usedKb = (telemetryState.storage.used / 1024).toFixed(1);
+    const totalKb = (telemetryState.storage.total / 1024).toFixed(1);
+    storageText.textContent = `${usedKb} KB / ${totalKb} KB`;
+
+    let percent = (telemetryState.storage.used / telemetryState.storage.total) * 100;
+    if (percent > 100) percent = 100;
+    
+    storageFill.style.width = `${percent}%`;
+    storageFill.className = 'storage-fill'; // reset classes
+    if (percent > 90) {
+      storageFill.classList.add('critical');
+    } else if (percent > 75) {
+      storageFill.classList.add('warning');
+    }
+  }
+
+  // 6. Conexión MQTT a TIG
+  const mqttLed = document.getElementById('mqtt-led');
+  const btnTig = document.getElementById('btn-sync-tig');
+  if (mqttLed) {
+    if (telemetryState.mqttConnected) {
+      mqttLed.classList.add('connected');
+      mqttLed.title = "MQTT Conectado a Orange Pi";
+      if (btnTig && !btnTig.classList.contains('loading')) {
+        btnTig.disabled = false;
+        btnTig.textContent = "Sincronizar y Vaciar LittleFS";
+      }
+    } else {
+      mqttLed.classList.remove('connected');
+      mqttLed.title = "MQTT Desconectado";
+      if (btnTig && !btnTig.classList.contains('loading')) {
+        btnTig.disabled = true;
+        btnTig.textContent = "Sin conexión al servidor TIG";
+      }
+    }
+  }
+
+  // 7. Marcador del Combate
+  const scoreWins = document.getElementById('score-wins');
+  const scoreLosses = document.getElementById('score-losses');
+  const matchStatus = document.getElementById('match-status');
+  
+  if (scoreWins && scoreLosses && matchStatus) {
+    scoreWins.textContent = telemetryState.score.wins;
+    scoreLosses.textContent = telemetryState.score.losses;
+
+    if (telemetryState.score.wins >= 2) {
+      matchStatus.textContent = "¡VICTORIA DEL MATCH! 🏆";
+      matchStatus.className = "match-status victory";
+    } else if (telemetryState.score.losses >= 2) {
+      matchStatus.textContent = "DERROTA DEL MATCH 💀";
+      matchStatus.className = "match-status defeat";
+    } else {
+      matchStatus.textContent = "Combate en curso (Mejor de 3)";
+      matchStatus.className = "match-status";
+    }
+  }
+
+  // 8. Batería
+  const batEl = document.getElementById('battery-monitor');
+  if (batEl) {
+    const v = telemetryState.battery.toFixed(2);
+    batEl.textContent = `🔋 ${v} V`;
+    if (telemetryState.battery <= 7.2) {
+      batEl.classList.add('critical');
+    } else {
+      batEl.classList.remove('critical');
+    }
+  }
 }
 
-
 // ==========================================
-// SIMULADOR (MOCK DATA)
+// MOCK SIMULATOR
 // ==========================================
-let simInterval = null;
+let simInterval;
 function startMockSimulator() {
-  if (simInterval) clearInterval(simInterval);
+  const maxToF = 1200;
   
   simInterval = setInterval(() => {
-    // Generar valores aleatorios coherentes
-    
-    // PWM: -1023 a 1023
-    telemetryState.motors.left = Math.floor(Math.random() * 2047) - 1023; 
+    telemetryState.motors.left = Math.floor(Math.random() * 2047) - 1023;
     telemetryState.motors.right = Math.floor(Math.random() * 2047) - 1023;
     telemetryState.motors.stallL = Math.random() > 0.95;
     telemetryState.motors.stallR = Math.random() > 0.95;
     
-    // ToFs
     ['ai', 'ac', 'ad', 'bi', 'bc', 'bd'].forEach(id => {
       telemetryState.tof[id] = Math.floor(Math.random() * maxToF);
     });
     
-    // TCRT
     ['fl', 'fr', 'bl', 'br'].forEach(id => {
       telemetryState.tcrt[id] = Math.random() > 0.9;
     });
 
-    // FSM
     const states = ["BUSQUEDA_ESTRELLA", "ATAQUE_PRONUNCIADO", "EVASION", "IDLE"];
     telemetryState.fsm.state = states[Math.floor(Math.random() * states.length)];
-    telemetryState.fsm.cycleTime = Math.floor(Math.random() * 10) + 5; // 5-15ms
+    telemetryState.fsm.cycleTime = Math.floor(Math.random() * 10) + 5; 
 
-    // Sincronizar Estrategia con el select actual
     const strategySelect = document.getElementById('estrategia');
-    telemetryState.fsm.strategy = strategySelect.options[strategySelect.selectedIndex].text;
+    if (strategySelect) {
+      telemetryState.fsm.strategy = strategySelect.options[strategySelect.selectedIndex].text;
+    }
+
+    telemetryState.storage.used += 1024;
+    if (telemetryState.storage.used > telemetryState.storage.total) {
+      telemetryState.storage.used = telemetryState.storage.total; 
+    }
+
+    if (Math.random() > 0.98) {
+      telemetryState.mqttConnected = !telemetryState.mqttConnected;
+    }
+
+    if (!telemetryState.matchTimer) telemetryState.matchTimer = 0;
+    telemetryState.matchTimer++;
+    
+    if (telemetryState.matchTimer > 50) { 
+      telemetryState.matchTimer = 0;
+      if (telemetryState.score.wins < 2 && telemetryState.score.losses < 2) {
+        if (Math.random() > 0.5) telemetryState.score.wins++;
+        else telemetryState.score.losses++;
+      } else {
+        telemetryState.score.wins = 0;
+        telemetryState.score.losses = 0;
+      }
+    }
+
+    // Drenaje de batería simulado
+    telemetryState.battery -= 0.001;
+    if (telemetryState.battery < 6.9) telemetryState.battery = 8.4;
 
     updateTelemetryUI();
-  }, 100); // 10Hz refresco visual
+  }, 100); 
 }
-
 
 // ==========================================
 // WEBSOCKET (PREPARADO PARA FUTURO ESP32)
@@ -131,13 +239,10 @@ function startMockSimulator() {
 let ws = null;
 function initWebSocket() {
   const gateway = `ws://${window.location.hostname}/ws`;
-  console.log('Intentando conectar a:', gateway);
-  
   ws = new WebSocket(gateway);
   
   ws.onopen = () => {
     console.log('WebSocket conectado');
-    // Si se conecta el WS real, detenemos el simulador para usar datos reales
     if (simInterval) {
       clearInterval(simInterval);
       simInterval = null;
@@ -145,36 +250,18 @@ function initWebSocket() {
   };
   
   ws.onclose = () => {
-    console.log('WebSocket desconectado, reintentando...');
     setTimeout(initWebSocket, 2000);
   };
   
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      // data debe estructurarse para actualizar telemetryState
-      // Ejemplo: si el backend envía algo como { "tof_ai": 300 }
-      // Aquí mapearíamos eso al estado.
-      
-      // ... mapeo de datos reales al telemetryState ...
-
       updateTelemetryUI();
     } catch (e) {
-      console.error('Error parseando JSON del WS:', e);
+      console.error('Error parseando JSON:', e);
     }
   };
 }
-
-// ==========================================
-// INICIO
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  // Arrancamos el simulador por defecto para poder ver la interfaz funcionando en local
-  startMockSimulator();
-
-  // Descomentar para habilitar conexión real vía WebSocket:
-  // initWebSocket();
-});
 
 // ==========================================
 // UX DEL FORMULARIO Y AJAX/WEBSOCKET
@@ -183,48 +270,187 @@ function setupFormUX() {
   const form = document.getElementById('configuracion');
   const toast = document.getElementById('toast');
 
-  // Sincronizar Sliders con Inputs numéricos
+  // Sliders
   document.querySelectorAll('.slider-group').forEach(group => {
     const range = group.querySelector('input[type="range"]');
     const num = group.querySelector('input[type="number"]');
-    
     if (range && num) {
-      range.addEventListener('input', () => {
-        num.value = range.value;
-      });
-      num.addEventListener('input', () => {
-        range.value = num.value;
-      });
+      range.addEventListener('input', () => { num.value = range.value; });
+      num.addEventListener('input', () => { range.value = num.value; });
     }
   });
 
-  // Interceptar Submit para enviar por AJAX/WebSocket sin recargar
-  form.addEventListener('submit', (e) => {
-    e.preventDefault(); // Evita recarga de página
+  const selectModo = document.getElementById('modo');
+  if (selectModo) {
+    selectModo.value = "1";
+  }
 
-    const formData = new FormData(form);
-    const configObj = Object.fromEntries(formData.entries());
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault(); 
+      const formData = new FormData(form);
+      const configObj = Object.fromEntries(formData.entries());
+      configObj.reboot = true;
 
-    console.log("Datos listos para enviar al ESP32:", configObj);
+      const esCombate = configObj.modo === "1";
+      const modoTexto = esCombate ? "Combate" : "Prueba";
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "SET_CONFIG", payload: configObj }));
+      }
+      
+      toast.textContent = esCombate ? `⚙️ Modo ${modoTexto} Activado. Reiniciando Robot...` : `🛠️ Modo ${modoTexto} Activado. Reiniciando Robot...`;
+      toast.style.backgroundColor = esCombate ? "var(--warning)" : "var(--safe)";
+      toast.classList.remove('hidden');
+      setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+    });
+  }
 
-    // FUTURO: Enviar por WebSocket si está conectado
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "SET_CONFIG", payload: configObj }));
-    } else {
-      console.warn("WebSocket no conectado, simulando envío AJAX...");
-      // Aquí podrías usar fetch() si tu ESP32 usa endpoints REST en lugar de WS
-    }
+  // TIG Sync
+  const btnTig = document.getElementById('btn-sync-tig');
+  if (btnTig) {
+    btnTig.addEventListener('click', () => {
+      btnTig.disabled = true;
+      btnTig.classList.add('loading');
+      btnTig.textContent = "⏳ Sincronizando MQTT...";
+      setTimeout(() => {
+        btnTig.classList.remove('loading');
+        btnTig.textContent = "✅ Volcado Exitoso";
+        btnTig.style.backgroundColor = "var(--safe)";
+        btnTig.style.color = "#000";
+        telemetryState.storage.used = 0;
+        setTimeout(() => {
+          btnTig.disabled = false;
+          btnTig.textContent = "Sincronizar y Vaciar LittleFS";
+          btnTig.style.backgroundColor = "transparent";
+          btnTig.style.color = "var(--accent)";
+        }, 3000);
+      }, 2500);
+    });
+  }
 
-    // Mostrar Notificación Toast
-    toast.classList.remove('hidden');
-    setTimeout(() => {
-      toast.classList.add('hidden');
-    }, 3000);
-  });
+  // E-STOP
+  const btnEstop = document.getElementById('btn-estop');
+  if (btnEstop) {
+    btnEstop.addEventListener('click', () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ESTOP" }));
+      }
+      toast.textContent = "🛑 EMERGENCIA ACTIVADA: MOTORES APAGADOS";
+      toast.style.backgroundColor = "var(--danger)";
+      toast.style.color = "#fff";
+      toast.classList.remove('hidden');
+      setTimeout(() => { toast.classList.add('hidden'); }, 5000);
+    });
+  }
+
+  // EXPORTAR PERFIL
+  const btnExport = document.getElementById('btn-export');
+  if (btnExport) {
+    btnExport.addEventListener('click', () => {
+      const formData = new FormData(form);
+      const configObj = Object.fromEntries(formData.entries());
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(configObj, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "perfil_sumo.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      toast.textContent = "💾 Perfil Exportado Exitosamente";
+      toast.style.backgroundColor = "var(--safe)";
+      toast.classList.remove('hidden');
+      setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+    });
+  }
+
+  // IMPORTAR PERFIL A NVS (SILENCIOSO)
+  const fileImport = document.getElementById('file-import');
+  const nvsSelect = document.getElementById('nvs-select');
+  
+  if (fileImport) {
+    fileImport.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const configObj = JSON.parse(e.target.result);
+          
+          // En lugar de aplicarlo, pedimos un nombre para guardarlo en la NVS
+          const profileName = prompt("Ingresa un nombre para guardar este perfil en la memoria del robot (ej. AntiCuna):", file.name.replace('.json', ''));
+          
+          if (profileName) {
+            // Guardar en simulador NVS
+            mockNvsProfiles[profileName] = configObj;
+            
+            // Simular orden al ESP32
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "SAVE_PROFILE_NVS", name: profileName, payload: configObj }));
+            }
+            
+            // Actualizar la lista desplegable
+            if (nvsSelect) {
+              // Si estaba vacío quitamos la opción por defecto
+              if (nvsSelect.options[0].value === "") {
+                nvsSelect.innerHTML = "";
+              }
+              const opt = document.createElement('option');
+              opt.value = profileName;
+              opt.textContent = profileName;
+              nvsSelect.appendChild(opt);
+              nvsSelect.value = profileName;
+            }
+            
+            toast.textContent = `💾 Perfil '${profileName}' guardado en la memoria NVS del robot.`;
+            toast.style.backgroundColor = "var(--safe)";
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+          }
+        } catch (err) {
+          console.error("Error parseando JSON", err);
+          alert("Archivo JSON inválido");
+        }
+      };
+      reader.readAsText(file);
+      fileImport.value = "";
+    });
+  }
+
+  // CARGAR PERFIL NVS AL FORMULARIO
+  const btnLoadNvs = document.getElementById('btn-load-nvs');
+  if (btnLoadNvs && nvsSelect) {
+    btnLoadNvs.addEventListener('click', () => {
+      const profileName = nvsSelect.value;
+      if (!profileName || !mockNvsProfiles[profileName]) {
+        alert("Selecciona un perfil válido de la lista.");
+        return;
+      }
+      
+      const configObj = mockNvsProfiles[profileName];
+      for (const key in configObj) {
+        const el = form.elements[key];
+        if (el) {
+          el.value = configObj[key];
+          // Sincronizar sliders visuales
+          if (el.type === 'number') {
+            const rangeEl = document.getElementById('range_' + key);
+            if (rangeEl) rangeEl.value = configObj[key];
+          }
+        }
+      }
+      
+      toast.textContent = `📂 Perfil '${profileName}' cargado al panel. ¡Revisa y aplica!`;
+      toast.style.backgroundColor = "var(--accent)";
+      toast.style.color = "#fff";
+      toast.classList.remove('hidden');
+      setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+    });
+  }
 }
 
-// Agregar al inicio del DOMContentLoaded existente
-const oldContentLoaded = window.onload;
 document.addEventListener('DOMContentLoaded', () => {
+  startMockSimulator();
   setupFormUX();
 });

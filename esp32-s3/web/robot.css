@@ -125,8 +125,9 @@ button#aplicar:hover {
 }
 
 .fsm-status {
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
   background-color: rgba(0,0,0,0.2);
   padding: 12px;
   border-radius: 6px;
@@ -134,16 +135,29 @@ button#aplicar:hover {
   font-family: monospace;
   font-size: 1.1em;
   border: 1px solid var(--border-color);
+  min-height: 65px; 
+  align-items: center;
+  text-align: center;
+}
+
+.fsm-status > div {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; 
 }
 
 .fsm-status .label {
   color: var(--text-dim);
-  font-size: 0.8em;
+  font-size: 0.75em;
+  margin-bottom: 4px;
 }
 
 .fsm-status .val {
   color: var(--accent);
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .robot-hud {
@@ -166,7 +180,7 @@ button#aplicar:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 60px;
+  width: 65px;
 }
 
 .tof-label {
@@ -176,6 +190,11 @@ button#aplicar:hover {
   text-align: center;
   margin-top: 5px;
   margin-bottom: 5px;
+  white-space: nowrap;
+  min-height: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .tof-label .dist {
@@ -306,8 +325,10 @@ button#aplicar:hover {
   font-family: monospace;
   font-size: 0.9em;
   margin-top: 5px;
-  width: 40px;
+  width: 50px;
   text-align: center;
+  white-space: nowrap;
+  min-height: 20px;
 }
 
 .stall-alert {
@@ -449,4 +470,346 @@ input[type="range"]::-webkit-slider-thumb:hover {
   opacity: 0;
   bottom: -50px;
   pointer-events: none;
+}
+
+/* ==================================
+   TIG SYNC CARD
+   ================================== */
+.tig-sync-card {
+  margin-top: 20px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+}
+
+.tig-sync-card h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tig-sync-card .desc {
+  font-size: 0.85em;
+  color: var(--text-dim);
+  margin-bottom: 15px;
+}
+
+.storage-info {
+  margin-bottom: 15px;
+}
+
+.storage-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  color: var(--text-main);
+  margin-bottom: 5px;
+  font-family: monospace;
+}
+
+.storage-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background-color: #111226;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.storage-fill {
+  height: 100%;
+  background-color: var(--accent);
+  width: 0%;
+  transition: width 0.3s ease, background-color 0.3s;
+}
+
+.storage-fill.warning {
+  background-color: var(--warning);
+}
+
+.storage-fill.critical {
+  background-color: var(--danger);
+}
+
+.btn-sync {
+  width: 100%;
+  padding: 10px;
+  background-color: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-sync:hover {
+  background-color: var(--accent);
+  color: #fff;
+}
+
+.btn-sync:disabled {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+/* Add loading animation class */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.btn-sync.loading {
+  animation: pulse 1.5s infinite;
+  background-color: var(--panel-bg);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+/* MQTT LED */
+.mqtt-led {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: auto; /* Pushes LED to the right if flex container allows */
+  background-color: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.mqtt-led.connected {
+  background-color: var(--safe);
+  box-shadow: 0 0 8px var(--safe);
+}
+
+/* ==================================
+   MATCH SCORE CARD
+   ================================== */
+.match-score-card {
+  margin-top: 20px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.match-score-card h3 {
+  margin-top: 0;
+  color: var(--text-main);
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.score-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: rgba(0,0,0,0.3);
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.score-box.wins {
+  border-color: rgba(0, 255, 100, 0.2);
+}
+
+.score-box.losses {
+  border-color: rgba(255, 50, 50, 0.2);
+}
+
+.score-label {
+  font-size: 0.7em;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.score-number {
+  font-size: 2.5em;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.score-box.wins .score-number {
+  color: var(--safe);
+}
+
+.score-box.losses .score-number {
+  color: var(--danger);
+}
+
+.score-divider {
+  font-size: 2em;
+  color: var(--text-dim);
+  font-weight: bold;
+}
+
+.match-status {
+  font-size: 0.9em;
+  color: var(--accent);
+  font-weight: bold;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.match-status.victory {
+  background-color: rgba(0, 255, 100, 0.1);
+  color: var(--safe);
+}
+
+.match-status.defeat {
+  background-color: rgba(255, 50, 50, 0.1);
+  color: var(--danger);
+}
+
+/* ==================================
+   NEW FEATURES (BATTERY, ESTOP, PROFILES)
+   ================================== */
+
+/* Header & Battery */
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.battery-monitor {
+  font-family: monospace;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--safe);
+  background: rgba(0,0,0,0.4);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  transition: color 0.3s, background-color 0.3s;
+}
+
+.battery-monitor.critical {
+  color: #fff;
+  background-color: var(--danger);
+  animation: pulse-danger 1s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { box-shadow: 0 0 0 0 rgba(255,50,50,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255,50,50,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,50,50,0); }
+}
+
+/* Form Actions (Export/Import) */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.form-actions > * {
+  flex: 1;
+  text-align: center;
+}
+
+.btn-secondary {
+  background-color: var(--panel-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.9em;
+}
+
+.btn-secondary:hover {
+  background-color: #2a2c5a;
+}
+
+/* Floating E-Stop */
+.btn-estop {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--danger);
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.1em;
+  border: 4px solid #fff;
+  box-shadow: 0 10px 20px rgba(255,0,0,0.5);
+  cursor: pointer;
+  z-index: 10000;
+  transition: transform 0.1s;
+}
+
+.btn-estop:active {
+  transform: scale(0.9);
+}
+
+/* NVS Profile Manager */
+.nvs-profile-manager {
+  background-color: rgba(0,0,0,0.2);
+  border: 1px dashed var(--accent);
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 15px;
+  margin-bottom: 5px;
+}
+
+.nvs-profile-manager label {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 0.9em;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.nvs-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.nvs-controls select {
+  flex: 2;
+  background-color: #111226;
+  color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.nvs-controls button {
+  flex: 1;
+  font-size: 0.85em;
+  padding: 8px;
 }

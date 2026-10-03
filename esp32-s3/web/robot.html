@@ -6,7 +6,10 @@
 	<script src="robot.js" defer></script>
 </head>
 <body>
-<h1>Robot Sumo Dashboard</h1>
+<div class="header-container">
+	<h1>Robot Sumo Dashboard</h1>
+	<div class="battery-monitor" id="battery-monitor" title="Voltaje LiPo">🔋 -- V</div>
+</div>
 <div class="dashboard-wrapper">
 		<form id="configuracion" class="modern-form">
 		<h2>Configuración</h2>
@@ -181,7 +184,23 @@
 			</div>
 		</details>
 
-		<button type="submit" id="aplicar">Guardar y Enviar al Robot</button>
+		
+		<div class="nvs-profile-manager">
+			<label for="nvs-select">💾 Perfiles en Memoria Robot (NVS):</label>
+			<div class="nvs-controls">
+				<select id="nvs-select">
+					<option value="">-- Vacío --</option>
+				</select>
+				<button type="button" id="btn-load-nvs" class="btn-secondary">Cargar al Panel</button>
+			</div>
+		</div>
+
+		<div class="form-actions">
+			<button type="button" id="btn-export" class="btn-secondary" title="Guardar a PC/Celular">⬇️ Exportar</button>
+			<label for="file-import" class="btn-secondary" title="Cargar desde PC/Celular">⬆️ Importar</label>
+			<input type="file" id="file-import" accept=".json" style="display: none;">
+			<button type="submit" id="aplicar">Guardar y Enviar al Robot</button>
+		</div>
 	</form>
 
 	<div id="toast" class="toast hidden">Configuración Guardada</div>
@@ -256,8 +275,48 @@
 				</div>
 			</div>
 		</div> <!-- .robot-hud -->
+
+		<div class="card tig-sync-card">
+			<h3>
+				<span class="icon">📊</span> Sincronización TIG Stack (MQTT)
+				<span class="mqtt-led" id="mqtt-led" title="Estado de conexión MQTT a Orange Pi"></span>
+			</h3>
+			<p class="desc">Volcar historial de batallas (LittleFS) al servidor Orange Pi</p>
+			
+			<div class="storage-info">
+				<div class="storage-labels">
+					<span>Uso de LittleFS</span>
+					<span id="storage-text">0 KB / 0 KB</span>
+				</div>
+				<div class="storage-bar-wrap">
+					<div class="storage-fill" id="storage-fill"></div>
+				</div>
+			</div>
+
+			<button id="btn-sync-tig" class="btn-sync">Sincronizar y Vaciar LittleFS</button>
+		</div> <!-- .tig-sync-card -->
+
+		<div class="card match-score-card">
+			<h3><span class="icon">🏆</span> Marcador del Combate</h3>
+			<div class="score-display">
+				<div class="score-box wins">
+					<span class="score-label">VICTORIAS</span>
+					<span class="score-number" id="score-wins">0</span>
+				</div>
+				<div class="score-divider">-</div>
+				<div class="score-box losses">
+					<span class="score-label">DERROTAS</span>
+					<span class="score-number" id="score-losses">0</span>
+				</div>
+			</div>
+			<div class="match-status" id="match-status">Combate en curso (Mejor de 3)</div>
+		</div> <!-- .match-score-card -->
 	</div> <!-- #telemetry -->
 
 </div> <!-- .dashboard-wrapper -->
+
+	<!-- E-Stop Flotante -->
+	<button id="btn-estop" class="btn-estop">🛑 STOP</button>
+
 </body>
 </html>
