@@ -3,10 +3,10 @@
     "commit": 59,
     "tiempo": 12500,
     "heap": 12040,
-    "pila": 11.8,
+    "bateria": 11.8,
     "wifi": -55,
-    "ciclo": 6,
-    "prototipo": 0
+    "evacion": 0,
+    "ciclo": 6
   },
   "estado": {
     "modo": 2,
@@ -16,10 +16,10 @@
   "motores": {
     "pwm_izq": 255,
     "pwm_der": 200,
-    "pwm_izq_obj": 255,
-    "pwm_der_obj": 255,
-    "stall": 0,
-    "corriente": 0.0
+    "drv1": 0,
+    "drv2": 0,
+		"drv3": 0,
+		"drv4": 0
   },
   "sensores": {
     "tof": [150, 400, 8190, 500, 1200, 8190],

@@ -8,6 +8,7 @@ struct Datos{
 	int estado;
 	int estrategia;
 	int inicio;
+	int evasion;
 
 	//variable de los sensores ToF
 	uint16_t ToF1;
@@ -40,15 +41,15 @@ struct Datos{
 	uint16_t ambienteToF6;
 
 	//variable de la pila
-	float pila;
-	float corriente;
+	uint16_t bateria;
 
 	//variables de los motores
 	int16_t pwm1;
 	int16_t pwm2;
-	int16_t pwm1_obj;
-	int16_t pwm2_obj;
-	int stall;
+	uint16_t drv1;
+	uint16_t drv2;
+	uint16_t drv3;
+	uint16_t drv4;
 
 	//variables del sistema
 	uint32_t tiempo;

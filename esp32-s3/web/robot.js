@@ -6,7 +6,23 @@ const telemetryState = {
   storage: { used: 153600, total: 1048576 }, // Mock 1MB partition
   mqttConnected: false, // Estado de conexion a TIG (Orange Pi)
   score: { wins: 0, losses: 0 }, // Marcador del torneo (Mejor de 3)
-  battery: 8.4 // Voltaje de la batería
+  battery: 2800, // RAW ADC (e.g. 2800 = ~8.4V)
+  
+  // Diagnóstico Avanzado
+  evasion: 0,
+  inicio: 0,
+  wifi: -60,
+  heap: 150000,
+  tiempo: 0,
+  drv: { d1: 0, d2: 0, d3: 0, d4: 0 },
+  tofDiag: {
+    ai: { est: 0, sig: 50, amb: 10 },
+    ac: { est: 0, sig: 50, amb: 10 },
+    ad: { est: 0, sig: 50, amb: 10 },
+    bi: { est: 0, sig: 50, amb: 10 },
+    bc: { est: 0, sig: 50, amb: 10 },
+    bd: { est: 0, sig: 50, amb: 10 }
+  }
 };
 
 const mockNvsProfiles = {}; // Simulador de la memoria NVS del ESP32
@@ -159,17 +175,54 @@ function updateTelemetryUI() {
     }
   }
 
-  // 8. Batería
+  // 8. Batería (Conversión ADC a Voltaje en JS)
   const batEl = document.getElementById('battery-monitor');
   if (batEl) {
-    const v = telemetryState.battery.toFixed(2);
-    batEl.textContent = `🔋 ${v} V`;
-    if (telemetryState.battery <= 7.2) {
+    // Asumiendo ADC de 12 bits (0-4095) y un divisor de tensión donde 4095 = 12.6V max (por ejemplo)
+    // Ajusta la constante '333.3' según tu divisor resistivo real
+    const volt = (telemetryState.battery / 333.3).toFixed(2);
+    batEl.textContent = `🔋 ${volt} V`;
+    if (volt <= 7.2) {
       batEl.classList.add('critical');
     } else {
       batEl.classList.remove('critical');
     }
   }
+
+  // 9. Panel de Diagnóstico
+  const setEl = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = val;
+      if (cls !== undefined) el.className = `val ${cls}`;
+    }
+  };
+
+  setEl('diag-evasion', telemetryState.evasion ? "ACTIVO" : "INACTIVO", telemetryState.evasion ? "danger" : "safe");
+  setEl('diag-inicio', telemetryState.inicio ? "GO" : "ESPERA", telemetryState.inicio ? "safe" : "warning");
+  setEl('diag-wifi', `${telemetryState.wifi} dBm`);
+  setEl('diag-heap', `${(telemetryState.heap / 1024).toFixed(1)} KB`, telemetryState.heap < 20000 ? "danger" : "safe");
+  
+  // Convert uptime ms to HH:MM:SS
+  const totalSec = Math.floor(telemetryState.tiempo / 1000);
+  const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+  const s = String(totalSec % 60).padStart(2, '0');
+  setEl('diag-tiempo', `${h}:${m}:${s}`);
+
+  // DRV (IPROPI)
+  setEl('diag-drv1', telemetryState.drv.d1);
+  setEl('diag-drv2', telemetryState.drv.d2);
+  setEl('diag-drv3', telemetryState.drv.d3);
+  setEl('diag-drv4', telemetryState.drv.d4);
+
+  // ToFs (Est, Sig, Amb)
+  ['ai', 'ac', 'ad', 'bi', 'bc', 'bd'].forEach(id => {
+    const t = telemetryState.tofDiag[id];
+    setEl(`tof-est-${id}`, t.est, t.est !== 0 ? "danger" : "safe");
+    setEl(`tof-sig-${id}`, t.sig);
+    setEl(`tof-amb-${id}`, t.amb);
+  });
 }
 
 // ==========================================
@@ -225,9 +278,26 @@ function startMockSimulator() {
       }
     }
 
-    // Drenaje de batería simulado
-    telemetryState.battery -= 0.001;
-    if (telemetryState.battery < 6.9) telemetryState.battery = 8.4;
+    // Drenaje de batería simulado (ADC)
+    telemetryState.battery -= 1;
+    if (telemetryState.battery < 2300) telemetryState.battery = 2800; // ~6.9V a 8.4V
+
+    // Mock Diagnósticos
+    telemetryState.evasion = Math.random() > 0.95 ? 1 : 0;
+    telemetryState.inicio = Math.random() > 0.5 ? 1 : 0;
+    telemetryState.wifi = -50 - Math.floor(Math.random() * 30);
+    telemetryState.heap = 150000 + Math.floor(Math.random() * 5000) - 2500;
+    telemetryState.tiempo += 100;
+    telemetryState.drv.d1 = Math.floor(Math.random() * 500);
+    telemetryState.drv.d2 = Math.floor(Math.random() * 500);
+    telemetryState.drv.d3 = Math.floor(Math.random() * 500);
+    telemetryState.drv.d4 = Math.floor(Math.random() * 500);
+    
+    ['ai', 'ac', 'ad', 'bi', 'bc', 'bd'].forEach(id => {
+      telemetryState.tofDiag[id].est = Math.random() > 0.95 ? 4 : 0; // 4 = error común
+      telemetryState.tofDiag[id].sig = 50 + Math.floor(Math.random() * 200);
+      telemetryState.tofDiag[id].amb = Math.floor(Math.random() * 50);
+    });
 
     updateTelemetryUI();
   }, 100); 

@@ -813,3 +813,110 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-size: 0.85em;
   padding: 8px;
 }
+
+/* ==================================
+   DIAGNOSTIC PANEL
+   ================================== */
+.diag-card {
+  margin-top: 20px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.diag-card h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.diag-item {
+  background-color: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 10px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.diag-item .label {
+  font-size: 0.7em;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.diag-item .val {
+  font-family: monospace;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.diag-item .val.warning {
+  color: var(--warning);
+}
+
+.diag-item .val.danger {
+  color: var(--danger);
+  animation: pulse 1s infinite;
+}
+
+.diag-item .val.safe {
+  color: var(--safe);
+}
+
+.debug-group {
+  margin-bottom: 10px;
+}
+
+.debug-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  text-align: center;
+  font-family: monospace;
+  padding: 10px;
+  background-color: #0b0c1a;
+}
+
+.debug-grid-4col .label {
+  color: var(--text-dim);
+  display: block;
+  font-size: 0.8em;
+}
+
+.debug-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: monospace;
+  font-size: 0.85em;
+  text-align: center;
+  background-color: #0b0c1a;
+}
+
+.debug-table th, .debug-table td {
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.debug-table th {
+  color: var(--text-dim);
+  font-weight: normal;
+}
+
+.debug-table td {
+  color: var(--text-main);
+}

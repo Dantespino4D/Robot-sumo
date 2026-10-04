@@ -276,6 +276,42 @@
 			</div>
 		</div> <!-- .robot-hud -->
 
+		<!-- Panel de Diagnóstico -->
+		<div class="card diag-card">
+			<h3><span class="icon">💻</span> Diagnóstico del Sistema</h3>
+			
+			<div class="diag-grid">
+				<div class="diag-item"><span class="label">STM32 EVASIÓN:</span><span class="val" id="diag-evasion">INACTIVO</span></div>
+				<div class="diag-item"><span class="label">MÓDULO INICIO:</span><span class="val" id="diag-inicio">ESPERA</span></div>
+				<div class="diag-item"><span class="label">WIFI RSSI:</span><span class="val" id="diag-wifi">-0 dBm</span></div>
+				<div class="diag-item"><span class="label">FREE HEAP:</span><span class="val" id="diag-heap">0 KB</span></div>
+				<div class="diag-item"><span class="label">UPTIME:</span><span class="val" id="diag-tiempo">00:00:00</span></div>
+			</div>
+
+			<details class="config-group debug-group">
+				<summary>Corrientes Motores (DRV IPROPI)</summary>
+				<div class="debug-grid-4col">
+					<div><span class="label">DRV1</span><span class="val" id="diag-drv1">0</span></div>
+					<div><span class="label">DRV2</span><span class="val" id="diag-drv2">0</span></div>
+					<div><span class="label">DRV3</span><span class="val" id="diag-drv3">0</span></div>
+					<div><span class="label">DRV4</span><span class="val" id="diag-drv4">0</span></div>
+				</div>
+			</details>
+
+			<details class="config-group debug-group">
+				<summary>Debug ToFs (Estado / Señal / Ambiente)</summary>
+				<table class="debug-table">
+					<tr><th>ToF</th><th>Estado</th><th>Señal</th><th>Ambiente</th></tr>
+					<tr><td>AI</td><td id="tof-est-ai">0</td><td id="tof-sig-ai">0</td><td id="tof-amb-ai">0</td></tr>
+					<tr><td>AC</td><td id="tof-est-ac">0</td><td id="tof-sig-ac">0</td><td id="tof-amb-ac">0</td></tr>
+					<tr><td>AD</td><td id="tof-est-ad">0</td><td id="tof-sig-ad">0</td><td id="tof-amb-ad">0</td></tr>
+					<tr><td>BI</td><td id="tof-est-bi">0</td><td id="tof-sig-bi">0</td><td id="tof-amb-bi">0</td></tr>
+					<tr><td>BC</td><td id="tof-est-bc">0</td><td id="tof-sig-bc">0</td><td id="tof-amb-bc">0</td></tr>
+					<tr><td>BD</td><td id="tof-est-bd">0</td><td id="tof-sig-bd">0</td><td id="tof-amb-bd">0</td></tr>
+				</table>
+			</details>
+		</div> <!-- .diag-card -->
+
 		<div class="card tig-sync-card">
 			<h3>
 				<span class="icon">📊</span> Sincronización TIG Stack (MQTT)
