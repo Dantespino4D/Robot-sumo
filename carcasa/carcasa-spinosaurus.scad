@@ -294,7 +294,7 @@ module tapa(ancho, largo, x, y, z) {
 module motor(x, y, z) {
 	difference() {
 		translate([x, y, -((alto_motor / 2) - z)])
-			cube([largo_motor - 1, ancho_motor + 4, alto_motor + 2.2 + piso_cuna], center=true);
+			cube([largo_motor - 1 + 0.02, ancho_motor + 4, alto_motor + 2.2 + piso_cuna], center=true);
 
 		translate([x, y, -((alto_motor / 2) - z)])
 			cube([(largo_motor), (ancho_motor + 0.4), (alto_motor + 0.4)], center=true);
@@ -332,7 +332,7 @@ module seguro(x, y, z, a){
 			translate([x, y, z])
 				rotate([90, 0, 0])
 					cube([ancho_seguro - holgura, largo_seguro, grosor_seguro - holgura], center=true);
-			translate([x, y + largo_seguro/2 + largo_seguro2/2, z + grosor_seguro2/2 - grosor_seguro/2 + holgura/2])
+			translate([x, y + (grosor_seguro - holgura)/2 + grosor_seguro2/2 - holgura/2, z + grosor_seguro2/2 - grosor_seguro/2 + holgura/2])
 				rotate([90, 0, 0])
 					cube([ancho_seguro2, largo_seguro2, grosor_seguro2], center=true);
 		}
