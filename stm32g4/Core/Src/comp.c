@@ -26,7 +26,6 @@
 
 COMP_HandleTypeDef hcomp1;
 COMP_HandleTypeDef hcomp2;
-COMP_HandleTypeDef hcomp3;
 COMP_HandleTypeDef hcomp7;
 
 /* COMP1 init function */
@@ -83,33 +82,6 @@ void MX_COMP2_Init(void)
   /* USER CODE END COMP2_Init 2 */
 
 }
-/* COMP3 init function */
-void MX_COMP3_Init(void)
-{
-
-  /* USER CODE BEGIN COMP3_Init 0 */
-
-  /* USER CODE END COMP3_Init 0 */
-
-  /* USER CODE BEGIN COMP3_Init 1 */
-
-  /* USER CODE END COMP3_Init 1 */
-  hcomp3.Instance = COMP3;
-  hcomp3.Init.InputPlus = COMP_INPUT_PLUS_IO1;
-  hcomp3.Init.InputMinus = COMP_INPUT_MINUS_1_4VREFINT;
-  hcomp3.Init.OutputPol = COMP_OUTPUTPOL_NONINVERTED;
-  hcomp3.Init.Hysteresis = COMP_HYSTERESIS_NONE;
-  hcomp3.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
-  hcomp3.Init.TriggerMode = COMP_TRIGGERMODE_NONE;
-  if (HAL_COMP_Init(&hcomp3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN COMP3_Init 2 */
-
-  /* USER CODE END COMP3_Init 2 */
-
-}
 /* COMP7 init function */
 void MX_COMP7_Init(void)
 {
@@ -123,9 +95,9 @@ void MX_COMP7_Init(void)
   /* USER CODE END COMP7_Init 1 */
   hcomp7.Instance = COMP7;
   hcomp7.Init.InputPlus = COMP_INPUT_PLUS_IO1;
-  hcomp7.Init.InputMinus = COMP_INPUT_MINUS_1_4VREFINT;
-  hcomp7.Init.OutputPol = COMP_OUTPUTPOL_NONINVERTED;
-  hcomp7.Init.Hysteresis = COMP_HYSTERESIS_NONE;
+  hcomp7.Init.InputMinus = COMP_INPUT_MINUS_DAC2_CH1;
+  hcomp7.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
+  hcomp7.Init.Hysteresis = COMP_HYSTERESIS_MEDIUM;
   hcomp7.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
   hcomp7.Init.TriggerMode = COMP_TRIGGERMODE_NONE;
   if (HAL_COMP_Init(&hcomp7) != HAL_OK)
@@ -180,25 +152,6 @@ void HAL_COMP_MspInit(COMP_HandleTypeDef* compHandle)
 
   /* USER CODE END COMP2_MspInit 1 */
   }
-  else if(compHandle->Instance==COMP3)
-  {
-  /* USER CODE BEGIN COMP3_MspInit 0 */
-
-  /* USER CODE END COMP3_MspInit 0 */
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**COMP3 GPIO Configuration
-    PA0     ------> COMP3_INP
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN COMP3_MspInit 1 */
-
-  /* USER CODE END COMP3_MspInit 1 */
-  }
   else if(compHandle->Instance==COMP7)
   {
   /* USER CODE BEGIN COMP7_MspInit 0 */
@@ -252,21 +205,6 @@ void HAL_COMP_MspDeInit(COMP_HandleTypeDef* compHandle)
   /* USER CODE BEGIN COMP2_MspDeInit 1 */
 
   /* USER CODE END COMP2_MspDeInit 1 */
-  }
-  else if(compHandle->Instance==COMP3)
-  {
-  /* USER CODE BEGIN COMP3_MspDeInit 0 */
-
-  /* USER CODE END COMP3_MspDeInit 0 */
-
-    /**COMP3 GPIO Configuration
-    PA0     ------> COMP3_INP
-    */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0);
-
-  /* USER CODE BEGIN COMP3_MspDeInit 1 */
-
-  /* USER CODE END COMP3_MspDeInit 1 */
   }
   else if(compHandle->Instance==COMP7)
   {

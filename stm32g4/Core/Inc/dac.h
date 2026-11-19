@@ -37,6 +37,7 @@ extern "C" {
 /* USER CODE END Private defines */
 
 void MX_DAC1_Init(void);
+void MX_DAC2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 

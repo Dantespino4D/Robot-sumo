@@ -74,6 +74,7 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 		//aplicacion del umbral del limite
 		LL_DAC_ConvertData12RightAligned(DAC1, LL_DAC_CHANNEL_1, conf->u_limite);
 		LL_DAC_ConvertData12RightAligned(DAC1, LL_DAC_CHANNEL_2, conf->u_limite);
+		LL_DAC_ConvertData12RightAligned(DAC2, LL_DAC_CHANNEL_1, conf->u_limite);
 
 		//tiempo de retroceso
 		TRetroceso = conf->t_ret;
