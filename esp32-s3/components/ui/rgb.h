@@ -29,7 +29,7 @@ static inline void pwm_rgb() {
 
     // 2. Configurar el Canal A
     ledc_channel_config_t ledc_channel_a = {
-        .gpio_num       = RGB_PIN_A,
+        .gpio_num       = RGB_PIN_R,
         .speed_mode     = LEDC_MODE,
         .channel        = RGB_CHANNEL_A,
 		.intr_type      = LEDC_INTR_DISABLE,
@@ -45,7 +45,7 @@ static inline void pwm_rgb() {
 
     // 3. Configurar el Canal B
     ledc_channel_config_t ledc_channel_b = {
-        .gpio_num       = RGB_PIN_B,
+        .gpio_num       = RGB_PIN_G,
         .speed_mode     = LEDC_MODE,
         .channel        = RGB_CHANNEL_B,
 		.intr_type      = LEDC_INTR_DISABLE,
