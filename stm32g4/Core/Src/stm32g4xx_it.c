@@ -322,9 +322,9 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 
 	//se guarga el estado de los comparadores
 	tcrt1 = (COMP1->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt2 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt4 = (COMP4->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	tcrt2 = (COMP7->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	//tcrt3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	tcrt4 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
 
 	//detonante de la secuencia de frenado
 	tiempo = ms;
@@ -364,8 +364,8 @@ void TIM6_DAC_IRQHandler(void)
 			//apagamos el freno para poder salir de la linea
 			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
 			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4);
+			//LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
 
 			//limpiar la bandera de freno
 			LL_TIM_ClearFlag_BRK(TIM1);
@@ -395,8 +395,8 @@ void TIM6_DAC_IRQHandler(void)
 				//reactivamos el freno para que no se salga de la linea
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4);
+				//LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
 
 				//limpiamos bandera
 				LL_TIM_ClearFlag_BRK(TIM1);
