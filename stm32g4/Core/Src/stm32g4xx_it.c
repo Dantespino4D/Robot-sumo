@@ -95,6 +95,7 @@ static int16_t velActual_2 = 0;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 extern void SPI_DMA_RX_Callback(void);
+extern void SPI_ResyncRX(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -593,36 +594,21 @@ void TIM6_DAC_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 /**
-  * @brief This function handles EXTI line4 interrupt.
+  * @brief This function handles EXTI line[15:10] interrupts (NSS PA15, fin de trama).
   */
-void EXTI4_IRQHandler(void)
+void EXTI15_10_IRQHandler(void)
 {
-	//accion de evasion de glitches
-	if(LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_4) != RESET)
+	if(LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_15) != RESET)
 	{
-		//lismpiamos la bandera
-		LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_4);
+		LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_15);
 
-		//verificamos si termino la transferencia
+		//si el DMA esta alineado (0, 20 o 40 bytes pendientes) no hay nada que corregir
 		uint32_t cndtr = LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_1);
-
 		if(cndtr == 0 || cndtr == MAX_PACKET_SIZE || cndtr == MAX_PACKET_SIZE*2){
 			return;
 		}
 
-		//desactivamos los canales DMA
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-
-		//limpiamos la bandera de error del spi
-		LL_DMA_ClearFlag_HT1(DMA1);
-		LL_DMA_ClearFlag_TC1(DMA1);
-
-		//forazamos que inicie donde debe el canal 1
-		LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, (MAX_PACKET_SIZE*2));
-
-		//reactivamos el canal
-		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+		SPI_ResyncRX();
 	}
 }
 

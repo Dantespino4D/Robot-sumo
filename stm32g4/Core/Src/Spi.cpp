@@ -152,6 +152,17 @@ void Spi::recibir() {
 
 Spi spi;
 
+extern "C" void SPI_ResyncRX(void) {
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+	LL_DMA_ClearFlag_TC2(DMA1);
+	LL_DMA_ClearFlag_TE2(DMA1);
+	LL_SPI_DisableDMAReq_TX(SPI1);
+	LL_SPI_DisableDMAReq_RX(SPI1);
+	LL_SPI_Disable(SPI1);
+	spi.recibir();
+}
+
 extern "C" void SPI_DMA_RX_Callback(void) {
 	uint8_t* paquete = nullptr;
 	if (LL_DMA_IsActiveFlag_HT1(DMA1)) {

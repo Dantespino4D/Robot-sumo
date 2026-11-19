@@ -131,17 +131,16 @@ void MX_SPI1_Init(void)
   LL_SPI_SetStandard(SPI1, LL_SPI_PROTOCOL_MOTOROLA);
   LL_SPI_DisableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
-  /* Espionaje por Hardware: Ruteo de PA4 a EXTI4 */
+  /* Fin de trama: NSS (PA15) a EXTI15, flanco de SUBIDA (CS sube al terminar la trama) */
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE4);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE15);
 
-  /* Disparo EXTI en flanco de SUBIDA */
-  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_4);
-  LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_4);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_15);
+  LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_15);
 
-  /* Habilitación en NVIC (Prioridad Nivel 1) */
-  NVIC_SetPriority(EXTI4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
-  NVIC_EnableIRQ(EXTI4_IRQn);
+  /* Prioridad 3: por DEBAJO de DMA RX (2). Asi el rearme no interrumpe el parseo de un semibufer en curso */
+  NVIC_SetPriority(EXTI15_10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+  NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END SPI1_Init 2 */
 
 }
