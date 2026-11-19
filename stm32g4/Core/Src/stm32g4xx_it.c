@@ -47,7 +47,7 @@
 /* USER CODE BEGIN PV */
 //las velocidades objetivos
 extern volatile uint32_t velObjetivos;
-extern volatile uint16_t adc_buffer[5];
+extern volatile uint16_t adc_buffer[4];
 static uint32_t batFiltrada = 0;
 //tiempo
 uint64_t ms = 0;
@@ -530,11 +530,11 @@ void TIM6_DAC_IRQHandler(void)
 
 		//se verifica si es la primera vez que se lee el voltaje de la bateria
 		if(batFiltrada == 0){
-			batFiltrada = adc_buffer[4] << 4;
+			batFiltrada = adc_buffer[3] << 4;
 		}
 
 		//filtro
-		batFiltrada = batFiltrada - (batFiltrada >> 4) + (adc_buffer[4]);
+		batFiltrada = batFiltrada - (batFiltrada >> 4) + (adc_buffer[3]);
 
 		uint32_t batReal = batFiltrada >> 4;
 
