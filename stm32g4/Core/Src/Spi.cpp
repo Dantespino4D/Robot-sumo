@@ -138,6 +138,11 @@ void Spi::recibir() {
 		return;
 	}
 	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_ClearFlag_HT1(DMA1);
+	LL_DMA_ClearFlag_TC1(DMA1);
+	LL_DMA_ClearFlag_TE1(DMA1);
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_1);
 	LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_1, (uint32_t)bufferDma);
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, (MAX_PACKET_SIZE*2));
 	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
@@ -153,7 +158,8 @@ extern "C" void SPI_DMA_RX_Callback(void) {
 		LL_DMA_ClearFlag_HT1(DMA1);
 		paquete = (uint8_t*)&spi.bufferDma[0];
 		spi.recibirReporte(paquete);
-	}else if (LL_DMA_IsActiveFlag_TC1(DMA1)) {
+	}
+	if (LL_DMA_IsActiveFlag_TC1(DMA1)) {
 		LL_DMA_ClearFlag_TC1(DMA1);
 		paquete = (uint8_t*)&spi.bufferDma[MAX_PACKET_SIZE];
 		spi.recibirReporte(paquete);
