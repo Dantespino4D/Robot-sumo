@@ -98,12 +98,13 @@ int main(void)
   MX_COMP1_Init();
   MX_COMP2_Init();
   MX_COMP3_Init();
-  MX_COMP4_Init();
   MX_DAC1_Init();
   MX_SPI1_Init();
   MX_CRC_Init();
   MX_TIM6_Init();
   MX_ADC1_Init();
+  MX_ADC2_Init();
+  MX_COMP7_Init();
   /* USER CODE BEGIN 2 */
   app_main();
   /* USER CODE END 2 */

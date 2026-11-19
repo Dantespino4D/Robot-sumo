@@ -38,7 +38,7 @@ extern COMP_HandleTypeDef hcomp2;
 
 extern COMP_HandleTypeDef hcomp3;
 
-extern COMP_HandleTypeDef hcomp4;
+extern COMP_HandleTypeDef hcomp7;
 
 /* USER CODE BEGIN Private defines */
 
@@ -47,7 +47,7 @@ extern COMP_HandleTypeDef hcomp4;
 void MX_COMP1_Init(void);
 void MX_COMP2_Init(void);
 void MX_COMP3_Init(void);
-void MX_COMP4_Init(void);
+void MX_COMP7_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 

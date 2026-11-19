@@ -102,13 +102,30 @@ void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
     /**TIM1 GPIO Configuration
+    PC2     ------> TIM1_CH3
+    PC3     ------> TIM1_CH4
     PA8     ------> TIM1_CH1
     PA9     ------> TIM1_CH2
-    PA10     ------> TIM1_CH3
-    PA11     ------> TIM1_CH4
     */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
@@ -123,22 +140,6 @@ void MX_TIM1_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_11;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
