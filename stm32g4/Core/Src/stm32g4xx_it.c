@@ -64,8 +64,8 @@ uint16_t TStall = 250;
 volatile uint8_t stall = 0;
 
 //variables de la direccion del stall
-volatile uint8_t stall_dir1 = 0;
-volatile uint8_t stall_dir2 = 0;
+volatile int16_t stall_dir1 = 0;
+volatile int16_t stall_dir2 = 0;
 
 //variables de los comparadores
 uint8_t tcrt1 = 0;
@@ -466,6 +466,8 @@ void TIM6_DAC_IRQHandler(void)
 			}else{
 				//termino la maniobra
 				stall = 0;
+				stall_dir1 = 0;
+				stall_dir2 = 0;
 				velActual_1 = 0;
 				velActual_2 = 0;
 				v1_obj = 0;

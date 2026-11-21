@@ -6254,6 +6254,16 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 		LL_DAC_ConvertData12RightAligned(DAC1, LL_DAC_CHANNEL_2, conf->u_limite);
 		LL_DAC_ConvertData12RightAligned(DAC2, LL_DAC_CHANNEL_1, conf->u_limite);
 
+		//se valida el umbral antes de aplicarlo al TCRT3
+		uint32_t umbral = conf->u_limite;
+		if(umbral > 4095U){
+			umbral = 4095U;
+		}
+
+		//se aplica el umbral al TCRT3
+		ADC1->TR1 =(4095UL << ADC_TR1_HT1_Pos) | (umbral << ADC_TR1_LT1_Pos);
+
+
 		//tiempo de retroceso
 		TRetroceso = conf->t_ret;
 
