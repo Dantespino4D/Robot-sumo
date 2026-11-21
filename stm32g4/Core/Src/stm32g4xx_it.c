@@ -436,8 +436,8 @@ void TIM6_DAC_IRQHandler(void)
 
 		if(stall == 1) {
 			//desactibar el AWD
-			ADC1->IER &= ~ADC_IER_AWD1IE;
-			ADC2->IER &= ~ADC_IER_AWD1IE;
+			ADC1->IER &= ~ADC_IER_AWD2IE;
+			ADC2->IER &= ~ADC_IER_AWD2IE;
 
 			//ejecutamos la maniobra
 			if((ms - tiempo_st) <= TStall) {
@@ -478,10 +478,10 @@ void TIM6_DAC_IRQHandler(void)
 				TIM1->CCR4 = 1023;
 
 				//reactivamos el AWD y limpiamos la bandera
-				ADC1->ISR = ADC_ISR_AWD1;
-				ADC2->ISR = ADC_ISR_AWD1;
-				ADC1->IER |= ADC_IER_AWD1IE;
-				ADC2->IER |= ADC_IER_AWD1IE;
+				ADC1->ISR = ADC_ISR_AWD2;
+				ADC2->ISR = ADC_ISR_AWD2;
+				ADC1->IER |= ADC_IER_AWD2IE;
+				ADC2->IER |= ADC_IER_AWD2IE;
 			}
 			LL_TIM_EnableAllOutputs(TIM1);
 			return;
@@ -651,7 +651,7 @@ void ADC1_2_IRQHandler(void)
 	uint32_t isr2 = ADC2->ISR;
 
 	//validamos si hubo stall
-	if(isr1 & ADC_ISR_AWD1){
+	if(isr1 & ADC_ISR_AWD2){
 		//accion de proteccion por sobrevoltaje
 		TIM1->EGR |= TIM_EGR_BG;
 
@@ -667,9 +667,9 @@ void ADC1_2_IRQHandler(void)
 			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
 		}
 		//limpiar la bandera
-		ADC1->ISR = ADC_ISR_AWD1;
+		ADC1->ISR = ADC_ISR_AWD2;
 	}
-	if(isr2 & ADC_ISR_AWD1){
+	if(isr2 & ADC_ISR_AWD2){
 		//accion de proteccion por sobrevoltaje
 		TIM1->EGR |= TIM_EGR_BG;
 		//verificar estado actual
@@ -684,11 +684,11 @@ void ADC1_2_IRQHandler(void)
 			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
 		}
 		//limpiar la bandera
-		ADC2->ISR = ADC_ISR_AWD1;
+		ADC2->ISR = ADC_ISR_AWD2;
 	}
-	if(isr1 & ADC_ISR_AWD2){
+	if(isr1 & ADC_ISR_AWD1){
 		//se limpiar la bandera de interrupcion
-		ADC1->ISR = ADC_ISR_AWD2;
+		ADC1->ISR = ADC_ISR_AWD1;
 
 		//se marca la deteccion
 		tcrt3 = 1;

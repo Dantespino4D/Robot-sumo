@@ -119,7 +119,7 @@ void MX_ADC1_Init(void)
 	ADC1->AWD2CR = (1UL << 3) | (1UL << 7);
 
 	//fijar el limite superior de corriente
-	ADC1->TR2 = (3800UL << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
+	ADC1->TR2 = ((3800UL >> 4) << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
 
 	//habilitar la interrupcion del AWD2
 	ADC1->IER |= ADC_IER_AWD2IE;
@@ -128,7 +128,7 @@ void MX_ADC1_Init(void)
 	MODIFY_REG(ADC1->CFGR, ADC_CFGR_AWD1CH | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN | ADC_CFGR_JAWD1EN, (6UL << ADC_CFGR_AWD1CH_Pos) | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN);
 
 	//fijar el limite
-	ADC1->TR1 = ((4095UL >> 4) << ADC_TR1_HT1_Pos) | ((1024UL >> 4) << ADC_TR1_LT1_Pos);
+	ADC1->TR1 = (4095UL << ADC_TR1_HT1_Pos) | (1024UL << ADC_TR1_LT1_Pos);
 
 	//habilitar la interrupcion del AWD2
 	ADC1->IER |= ADC_IER_AWD1IE;
@@ -204,7 +204,7 @@ void MX_ADC2_Init(void)
 	ADC2->AWD2CR = (1UL << 14) | (1UL << 15);
 
 	//fijar el limite superior de corriente
-	ADC2->TR2 = (3800UL << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
+	ADC2->TR2 = ((3800UL >> 4) << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
 
 	//habilitar la interrupcion del AWD2
 	ADC2->IER |= ADC_IER_AWD2IE;
