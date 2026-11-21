@@ -98,7 +98,7 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 		}
 		if(accion->banderas & UNLOCK_M){
 			//apagamos el pin de interrupcion
-			GPIOC->BSRR = GPIO_PIN_9 << 16;
+			GPIOC->BSRR = GPIO_PIN_12 << 16;
 		}
 		velObjetivos = ((uint32_t)(uint16_t)accion->obj_2 << 16) | (uint32_t)(uint16_t)accion->obj_1;
 

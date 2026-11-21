@@ -40,11 +40,14 @@ extern "C" {
 
 extern ADC_HandleTypeDef hadc1;
 
+extern ADC_HandleTypeDef hadc2;
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
 void MX_ADC1_Init(void);
+void MX_ADC2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -120,9 +123,7 @@ extern COMP_HandleTypeDef hcomp1;
 
 extern COMP_HandleTypeDef hcomp2;
 
-extern COMP_HandleTypeDef hcomp3;
-
-extern COMP_HandleTypeDef hcomp4;
+extern COMP_HandleTypeDef hcomp7;
 
 /* USER CODE BEGIN Private defines */
 
@@ -130,8 +131,7 @@ extern COMP_HandleTypeDef hcomp4;
 
 void MX_COMP1_Init(void);
 void MX_COMP2_Init(void);
-void MX_COMP3_Init(void);
-void MX_COMP4_Init(void);
+void MX_COMP7_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -244,6 +244,7 @@ extern "C" {
 /* USER CODE END Private defines */
 
 void MX_DAC1_Init(void);
+void MX_DAC2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -693,8 +694,10 @@ void SysTick_Handler(void);
 void DMA1_Channel1_IRQHandler(void);
 void DMA1_Channel2_IRQHandler(void);
 void DMA1_Channel3_IRQHandler(void);
+void DMA1_Channel4_IRQHandler(void);
 void TIM1_BRK_TIM15_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
+void TIM7_DAC_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -794,7 +797,9 @@ FILE PATH: ./Core/Src/adc.c
 /* USER CODE END 0 */
 
 ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
+DMA_HandleTypeDef hdma_adc2;
 
 /* ADC1 init function */
 void MX_ADC1_Init(void)
@@ -822,7 +827,7 @@ void MX_ADC1_Init(void)
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.NbrOfConversion = 5;
+  hadc1.Init.NbrOfConversion = 4;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
@@ -844,7 +849,7 @@ void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Channel = ADC_CHANNEL_6;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -857,7 +862,7 @@ void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Channel = ADC_CHANNEL_3;
   sConfig.Rank = ADC_REGULAR_RANK_2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -866,7 +871,7 @@ void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Channel = ADC_CHANNEL_7;
   sConfig.Rank = ADC_REGULAR_RANK_3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -875,26 +880,114 @@ void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Channel = ADC_CHANNEL_11;
   sConfig.Rank = ADC_REGULAR_RANK_4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+	//aplicar el AWD a los canales de los DRV8871
+	ADC1->AWD2CR = (1UL << 3) | (1UL << 7);
+
+	//fijar el limite superior de corriente
+	ADC1->TR2 = ((3800UL >> 4) << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC1->IER |= ADC_IER_AWD2IE;
+
+	//aplicar el AWD2 al canal del TCRT3
+	MODIFY_REG(ADC1->CFGR, ADC_CFGR_AWD1CH | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN | ADC_CFGR_JAWD1EN, (6UL << ADC_CFGR_AWD1CH_Pos) | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN);
+
+	//fijar el limite
+	ADC1->TR1 = (4095UL << ADC_TR1_HT1_Pos) | (1024UL << ADC_TR1_LT1_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC1->IER |= ADC_IER_AWD1IE;
+
+	//limpiar las banderas de interrupcion
+	ADC1->ISR = ADC_ISR_AWD1 | ADC_ISR_AWD2;
+
+	//habilitar la interrupcion del ADC1
+	NVIC_EnableIRQ(ADC1_2_IRQn);
+  /* USER CODE END ADC1_Init 2 */
+
+}
+/* ADC2 init function */
+void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Common config
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.GainCompensation = 0;
+  hadc2.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.NbrOfConversion = 2;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+  hadc2.Init.DMAContinuousRequests = ENABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc2.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
   {
     Error_Handler();
   }
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_8;
-  sConfig.Rank = ADC_REGULAR_RANK_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN ADC1_Init 2 */
 
-  /* USER CODE END ADC1_Init 2 */
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+	//aplicar el AWD a los canales de los DRV8871
+	ADC2->AWD2CR = (1UL << 14) | (1UL << 15);
+
+	//fijar el limite superior de corriente
+	ADC2->TR2 = ((3800UL >> 4) << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC2->IER |= ADC_IER_AWD2IE;
+
+	//limpiar las banderas de interrupcion
+	ADC2->ISR = ADC_ISR_AWD2;
+  /* USER CODE END ADC2_Init 2 */
 
 }
+
+static uint32_t HAL_RCC_ADC12_CLK_ENABLED=0;
 
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
@@ -917,7 +1010,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     }
 
     /* ADC1 clock enable */
-    __HAL_RCC_ADC12_CLK_ENABLE();
+    HAL_RCC_ADC12_CLK_ENABLED++;
+    if(HAL_RCC_ADC12_CLK_ENABLED==1){
+      __HAL_RCC_ADC12_CLK_ENABLE();
+    }
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -925,11 +1021,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     /**ADC1 GPIO Configuration
     PC0     ------> ADC1_IN6
     PC1     ------> ADC1_IN7
-    PC2     ------> ADC1_IN8
     PA2     ------> ADC1_IN3
-    PB14     ------> ADC1_IN5
+    PB12     ------> ADC1_IN11
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2;
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -939,7 +1034,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_14;
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -966,6 +1061,59 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 
   /* USER CODE END ADC1_MspInit 1 */
   }
+  else if(adcHandle->Instance==ADC2)
+  {
+  /* USER CODE BEGIN ADC2_MspInit 0 */
+
+  /* USER CODE END ADC2_MspInit 0 */
+
+  /** Initializes the peripherals clocks
+  */
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
+    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_SYSCLK;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* ADC2 clock enable */
+    HAL_RCC_ADC12_CLK_ENABLED++;
+    if(HAL_RCC_ADC12_CLK_ENABLED==1){
+      __HAL_RCC_ADC12_CLK_ENABLE();
+    }
+
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /**ADC2 GPIO Configuration
+    PB11     ------> ADC2_IN14
+    PB15     ------> ADC2_IN15
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* ADC2 DMA Init */
+    /* ADC2 Init */
+    hdma_adc2.Instance = DMA1_Channel4;
+    hdma_adc2.Init.Request = DMA_REQUEST_ADC2;
+    hdma_adc2.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_adc2.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_adc2.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_adc2.Init.Mode = DMA_CIRCULAR;
+    hdma_adc2.Init.Priority = DMA_PRIORITY_LOW;
+    if (HAL_DMA_Init(&hdma_adc2) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc2);
+
+  /* USER CODE BEGIN ADC2_MspInit 1 */
+
+  /* USER CODE END ADC2_MspInit 1 */
+  }
 }
 
 void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
@@ -977,26 +1125,51 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 
   /* USER CODE END ADC1_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_ADC12_CLK_DISABLE();
+    HAL_RCC_ADC12_CLK_ENABLED--;
+    if(HAL_RCC_ADC12_CLK_ENABLED==0){
+      __HAL_RCC_ADC12_CLK_DISABLE();
+    }
 
     /**ADC1 GPIO Configuration
     PC0     ------> ADC1_IN6
     PC1     ------> ADC1_IN7
-    PC2     ------> ADC1_IN8
     PA2     ------> ADC1_IN3
-    PB14     ------> ADC1_IN5
+    PB12     ------> ADC1_IN11
     */
-    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2);
+    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0|GPIO_PIN_1);
 
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2);
 
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(adcHandle->DMA_Handle);
   /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
   /* USER CODE END ADC1_MspDeInit 1 */
+  }
+  else if(adcHandle->Instance==ADC2)
+  {
+  /* USER CODE BEGIN ADC2_MspDeInit 0 */
+
+  /* USER CODE END ADC2_MspDeInit 0 */
+    /* Peripheral clock disable */
+    HAL_RCC_ADC12_CLK_ENABLED--;
+    if(HAL_RCC_ADC12_CLK_ENABLED==0){
+      __HAL_RCC_ADC12_CLK_DISABLE();
+    }
+
+    /**ADC2 GPIO Configuration
+    PB11     ------> ADC2_IN14
+    PB15     ------> ADC2_IN15
+    */
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_11|GPIO_PIN_15);
+
+    /* ADC2 DMA DeInit */
+    HAL_DMA_DeInit(adcHandle->DMA_Handle);
+  /* USER CODE BEGIN ADC2_MspDeInit 1 */
+
+  /* USER CODE END ADC2_MspDeInit 1 */
   }
 }
 
@@ -1021,18 +1194,22 @@ Motores mot;
 
 extern DMA_HandleTypeDef hdma_dac1;
 
-extern volatile uint16_t adc_buffer[5];
+extern volatile uint16_t adc_buffer[4];
+extern volatile uint16_t adc_buffer2[2];
 extern DMA_HandleTypeDef hdma_adc1;
 
 void app_main(void){
 	HAL_COMP_Start(&hcomp1);
 	HAL_COMP_Start(&hcomp2);
-	HAL_COMP_Start(&hcomp3);
-	HAL_COMP_Start(&hcomp4);
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 5);
+	HAL_COMP_Start(&hcomp7);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, 4);
+	HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_buffer2, 2);
+	LL_DAC_SetHighFrequencyMode(DAC1, LL_DAC_HIGH_FREQ_MODE_ABOVE_160MHZ);
+	LL_DAC_SetHighFrequencyMode(DAC2, LL_DAC_HIGH_FREQ_MODE_ABOVE_160MHZ);
 	__HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT | DMA_IT_TC);
 	LL_DAC_Enable(DAC1,LL_DAC_CHANNEL_1);
 	LL_DAC_Enable(DAC1, LL_DAC_CHANNEL_2);
+	LL_DAC_Enable(DAC2, LL_DAC_CHANNEL_1);
 	mot.begin();
 	spi.begin();
  while (1){
@@ -1073,8 +1250,7 @@ FILE PATH: ./Core/Src/comp.c
 
 COMP_HandleTypeDef hcomp1;
 COMP_HandleTypeDef hcomp2;
-COMP_HandleTypeDef hcomp3;
-COMP_HandleTypeDef hcomp4;
+COMP_HandleTypeDef hcomp7;
 
 /* COMP1 init function */
 void MX_COMP1_Init(void)
@@ -1088,7 +1264,7 @@ void MX_COMP1_Init(void)
 
   /* USER CODE END COMP1_Init 1 */
   hcomp1.Instance = COMP1;
-  hcomp1.Init.InputPlus = COMP_INPUT_PLUS_IO1;
+  hcomp1.Init.InputPlus = COMP_INPUT_PLUS_IO2;
   hcomp1.Init.InputMinus = COMP_INPUT_MINUS_DAC1_CH1;
   hcomp1.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
   hcomp1.Init.Hysteresis = COMP_HYSTERESIS_MEDIUM;
@@ -1130,58 +1306,31 @@ void MX_COMP2_Init(void)
   /* USER CODE END COMP2_Init 2 */
 
 }
-/* COMP3 init function */
-void MX_COMP3_Init(void)
+/* COMP7 init function */
+void MX_COMP7_Init(void)
 {
 
-  /* USER CODE BEGIN COMP3_Init 0 */
+  /* USER CODE BEGIN COMP7_Init 0 */
 
-  /* USER CODE END COMP3_Init 0 */
+  /* USER CODE END COMP7_Init 0 */
 
-  /* USER CODE BEGIN COMP3_Init 1 */
+  /* USER CODE BEGIN COMP7_Init 1 */
 
-  /* USER CODE END COMP3_Init 1 */
-  hcomp3.Instance = COMP3;
-  hcomp3.Init.InputPlus = COMP_INPUT_PLUS_IO1;
-  hcomp3.Init.InputMinus = COMP_INPUT_MINUS_DAC1_CH1;
-  hcomp3.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
-  hcomp3.Init.Hysteresis = COMP_HYSTERESIS_MEDIUM;
-  hcomp3.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
-  hcomp3.Init.TriggerMode = COMP_TRIGGERMODE_NONE;
-  if (HAL_COMP_Init(&hcomp3) != HAL_OK)
+  /* USER CODE END COMP7_Init 1 */
+  hcomp7.Instance = COMP7;
+  hcomp7.Init.InputPlus = COMP_INPUT_PLUS_IO1;
+  hcomp7.Init.InputMinus = COMP_INPUT_MINUS_DAC2_CH1;
+  hcomp7.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
+  hcomp7.Init.Hysteresis = COMP_HYSTERESIS_MEDIUM;
+  hcomp7.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
+  hcomp7.Init.TriggerMode = COMP_TRIGGERMODE_NONE;
+  if (HAL_COMP_Init(&hcomp7) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN COMP3_Init 2 */
+  /* USER CODE BEGIN COMP7_Init 2 */
 
-  /* USER CODE END COMP3_Init 2 */
-
-}
-/* COMP4 init function */
-void MX_COMP4_Init(void)
-{
-
-  /* USER CODE BEGIN COMP4_Init 0 */
-
-  /* USER CODE END COMP4_Init 0 */
-
-  /* USER CODE BEGIN COMP4_Init 1 */
-
-  /* USER CODE END COMP4_Init 1 */
-  hcomp4.Instance = COMP4;
-  hcomp4.Init.InputPlus = COMP_INPUT_PLUS_IO1;
-  hcomp4.Init.InputMinus = COMP_INPUT_MINUS_DAC1_CH1;
-  hcomp4.Init.OutputPol = COMP_OUTPUTPOL_INVERTED;
-  hcomp4.Init.Hysteresis = COMP_HYSTERESIS_MEDIUM;
-  hcomp4.Init.BlankingSrce = COMP_BLANKINGSRC_NONE;
-  hcomp4.Init.TriggerMode = COMP_TRIGGERMODE_NONE;
-  if (HAL_COMP_Init(&hcomp4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN COMP4_Init 2 */
-
-  /* USER CODE END COMP4_Init 2 */
+  /* USER CODE END COMP7_Init 2 */
 
 }
 
@@ -1195,14 +1344,14 @@ void HAL_COMP_MspInit(COMP_HandleTypeDef* compHandle)
 
   /* USER CODE END COMP1_MspInit 0 */
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**COMP1 GPIO Configuration
-    PA1     ------> COMP1_INP
+    PB1     ------> COMP1_INP
     */
     GPIO_InitStruct.Pin = GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN COMP1_MspInit 1 */
 
@@ -1227,43 +1376,24 @@ void HAL_COMP_MspInit(COMP_HandleTypeDef* compHandle)
 
   /* USER CODE END COMP2_MspInit 1 */
   }
-  else if(compHandle->Instance==COMP3)
+  else if(compHandle->Instance==COMP7)
   {
-  /* USER CODE BEGIN COMP3_MspInit 0 */
+  /* USER CODE BEGIN COMP7_MspInit 0 */
 
-  /* USER CODE END COMP3_MspInit 0 */
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**COMP3 GPIO Configuration
-    PA0     ------> COMP3_INP
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN COMP3_MspInit 1 */
-
-  /* USER CODE END COMP3_MspInit 1 */
-  }
-  else if(compHandle->Instance==COMP4)
-  {
-  /* USER CODE BEGIN COMP4_MspInit 0 */
-
-  /* USER CODE END COMP4_MspInit 0 */
+  /* USER CODE END COMP7_MspInit 0 */
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**COMP4 GPIO Configuration
-    PB0     ------> COMP4_INP
+    /**COMP7 GPIO Configuration
+    PB14     ------> COMP7_INP
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    GPIO_InitStruct.Pin = GPIO_PIN_14;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN COMP4_MspInit 1 */
+  /* USER CODE BEGIN COMP7_MspInit 1 */
 
-  /* USER CODE END COMP4_MspInit 1 */
+  /* USER CODE END COMP7_MspInit 1 */
   }
 }
 
@@ -1277,9 +1407,9 @@ void HAL_COMP_MspDeInit(COMP_HandleTypeDef* compHandle)
   /* USER CODE END COMP1_MspDeInit 0 */
 
     /**COMP1 GPIO Configuration
-    PA1     ------> COMP1_INP
+    PB1     ------> COMP1_INP
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_1);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_1);
 
   /* USER CODE BEGIN COMP1_MspDeInit 1 */
 
@@ -1300,35 +1430,20 @@ void HAL_COMP_MspDeInit(COMP_HandleTypeDef* compHandle)
 
   /* USER CODE END COMP2_MspDeInit 1 */
   }
-  else if(compHandle->Instance==COMP3)
+  else if(compHandle->Instance==COMP7)
   {
-  /* USER CODE BEGIN COMP3_MspDeInit 0 */
+  /* USER CODE BEGIN COMP7_MspDeInit 0 */
 
-  /* USER CODE END COMP3_MspDeInit 0 */
+  /* USER CODE END COMP7_MspDeInit 0 */
 
-    /**COMP3 GPIO Configuration
-    PA0     ------> COMP3_INP
+    /**COMP7 GPIO Configuration
+    PB14     ------> COMP7_INP
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14);
 
-  /* USER CODE BEGIN COMP3_MspDeInit 1 */
+  /* USER CODE BEGIN COMP7_MspDeInit 1 */
 
-  /* USER CODE END COMP3_MspDeInit 1 */
-  }
-  else if(compHandle->Instance==COMP4)
-  {
-  /* USER CODE BEGIN COMP4_MspDeInit 0 */
-
-  /* USER CODE END COMP4_MspDeInit 0 */
-
-    /**COMP4 GPIO Configuration
-    PB0     ------> COMP4_INP
-    */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_0);
-
-  /* USER CODE BEGIN COMP4_MspDeInit 1 */
-
-  /* USER CODE END COMP4_MspDeInit 1 */
+  /* USER CODE END COMP7_MspDeInit 1 */
   }
 }
 
@@ -1474,6 +1589,44 @@ void MX_DAC1_Init(void)
   /* USER CODE END DAC1_Init 2 */
 
 }
+/* DAC2 init function */
+void MX_DAC2_Init(void)
+{
+
+  /* USER CODE BEGIN DAC2_Init 0 */
+
+  /* USER CODE END DAC2_Init 0 */
+
+  LL_DAC_InitTypeDef DAC_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_DAC2);
+
+  /* DAC2 interrupt Init */
+  NVIC_SetPriority(TIM7_DAC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM7_DAC_IRQn);
+
+  /* USER CODE BEGIN DAC2_Init 1 */
+
+  /* USER CODE END DAC2_Init 1 */
+
+  /** DAC channel OUT1 config
+  */
+  LL_DAC_SetSignedFormat(DAC2, LL_DAC_CHANNEL_1, LL_DAC_SIGNED_FORMAT_DISABLE);
+  DAC_InitStruct.TriggerSource = LL_DAC_TRIG_SOFTWARE;
+  DAC_InitStruct.TriggerSource2 = LL_DAC_TRIG_SOFTWARE;
+  DAC_InitStruct.WaveAutoGeneration = LL_DAC_WAVE_AUTO_GENERATION_NONE;
+  DAC_InitStruct.OutputBuffer = LL_DAC_OUTPUT_BUFFER_DISABLE;
+  DAC_InitStruct.OutputConnection = LL_DAC_OUTPUT_CONNECT_INTERNAL;
+  DAC_InitStruct.OutputMode = LL_DAC_OUTPUT_MODE_NORMAL;
+  LL_DAC_Init(DAC2, LL_DAC_CHANNEL_1, &DAC_InitStruct);
+  LL_DAC_DisableTrigger(DAC2, LL_DAC_CHANNEL_1);
+  LL_DAC_DisableDMADoubleDataMode(DAC2, LL_DAC_CHANNEL_1);
+  /* USER CODE BEGIN DAC2_Init 2 */
+
+  /* USER CODE END DAC2_Init 2 */
+
+}
 
 /* USER CODE BEGIN 1 */
 
@@ -1541,6 +1694,9 @@ void MX_DMA_Init(void)
   /* DMA1_Channel3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
 
 }
 
@@ -1606,13 +1762,13 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_12, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PC9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  /*Configure GPIO pin : PC12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 }
@@ -1725,13 +1881,14 @@ int main(void)
   MX_TIM1_Init();
   MX_COMP1_Init();
   MX_COMP2_Init();
-  MX_COMP3_Init();
-  MX_COMP4_Init();
   MX_DAC1_Init();
   MX_SPI1_Init();
   MX_CRC_Init();
   MX_TIM6_Init();
   MX_ADC1_Init();
+  MX_ADC2_Init();
+  MX_COMP7_Init();
+  MX_DAC2_Init();
   /* USER CODE BEGIN 2 */
   app_main();
   /* USER CODE END 2 */
@@ -1915,19 +2072,36 @@ void MX_SPI1_Init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
 
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
   /**SPI1 GPIO Configuration
-  PA4   ------> SPI1_NSS
-  PA5   ------> SPI1_SCK
-  PA6   ------> SPI1_MISO
-  PA7   ------> SPI1_MOSI
+  PA15   ------> SPI1_NSS
+  PB3   ------> SPI1_SCK
+  PB4   ------> SPI1_MISO
+  PB5   ------> SPI1_MOSI
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_4;
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
+  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_4;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
+  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = LL_GPIO_PIN_5;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
@@ -1935,23 +2109,7 @@ void MX_SPI1_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_7;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* SPI1 DMA Init */
 
@@ -2005,17 +2163,16 @@ void MX_SPI1_Init(void)
   LL_SPI_SetStandard(SPI1, LL_SPI_PROTOCOL_MOTOROLA);
   LL_SPI_DisableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
-  /* Espionaje por Hardware: Ruteo de PA4 a EXTI4 */
+  /* Fin de trama: NSS (PA15) a EXTI15, flanco de SUBIDA (CS sube al terminar la trama) */
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
-  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE4);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE15);
 
-  /* Disparo EXTI en flanco de SUBIDA */
-  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_4);
-  LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_4);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_15);
+  LL_EXTI_EnableRisingTrig_0_31(LL_EXTI_LINE_15);
 
-  /* Habilitación en NVIC (Prioridad Nivel 1) */
-  NVIC_SetPriority(EXTI4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
-  NVIC_EnableIRQ(EXTI4_IRQn);
+  /* Prioridad 3: por DEBAJO de DMA RX (2). Asi el rearme no interrumpe el parseo de un semibufer en curso */
+  NVIC_SetPriority(EXTI15_10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+  NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END SPI1_Init 2 */
 
 }
@@ -2043,8 +2200,11 @@ FILE PATH: ./Core/Src/Spi.cpp
 #include <cstdint>
 
 volatile uint32_t velObjetivos = 0;
-volatile uint16_t adc_buffer[5] = {0};
+volatile uint16_t adc_buffer[4] = {0};
+volatile uint16_t adc_buffer2[2] = {0};
 extern uint16_t TRetroceso;
+
+extern "C" uint8_t tcrt3;
 
 Spi::Spi() :
 	bufferA{},
@@ -2075,14 +2235,15 @@ void Spi::armarReporte(){
 	reporte.inicio[2] = HEADER_3;
 	reporte.id = ID_STM;
 	reporte.tcrt_1 = (COMP1->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	reporte.tcrt_2 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	reporte.tcrt_3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	reporte.tcrt_4 = (COMP4->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	reporte.drv_1 = adc_buffer[0];
-	reporte.drv_2 = adc_buffer[1];
-	reporte.drv_3 = adc_buffer[2];
-	reporte.drv_4 = adc_buffer[3];
-	reporte.bateria = adc_buffer[4];
+	reporte.tcrt_2 = (COMP7->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	reporte.tcrt_3 = tcrt3;
+	//reporte.tcrt_3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	reporte.tcrt_4 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	reporte.drv_1 = adc_buffer2[0];
+	reporte.drv_2 = adc_buffer[2];
+	reporte.drv_3 = adc_buffer[1];
+	reporte.drv_4 = adc_buffer2[1];
+	reporte.bateria = adc_buffer[3];
 	reporte.cont = cont;
 	reporte.final = crc8((uint8_t*)&reporte, sizeof(Stm_t) - 1);
 	cont++;
@@ -2106,6 +2267,7 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 		//aplicacion del umbral del limite
 		LL_DAC_ConvertData12RightAligned(DAC1, LL_DAC_CHANNEL_1, conf->u_limite);
 		LL_DAC_ConvertData12RightAligned(DAC1, LL_DAC_CHANNEL_2, conf->u_limite);
+		LL_DAC_ConvertData12RightAligned(DAC2, LL_DAC_CHANNEL_1, conf->u_limite);
 
 		//tiempo de retroceso
 		TRetroceso = conf->t_ret;
@@ -2125,7 +2287,7 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 		}
 		if(accion->banderas & UNLOCK_M){
 			//apagamos el pin de interrupcion
-			GPIOC->BSRR = GPIO_PIN_9 << 16;
+			GPIOC->BSRR = GPIO_PIN_12 << 16;
 		}
 		velObjetivos = ((uint32_t)(uint16_t)accion->obj_2 << 16) | (uint32_t)(uint16_t)accion->obj_1;
 
@@ -2143,6 +2305,14 @@ void Spi::enviar(uint8_t *data, uint16_t size) {
 	}
 	//se deshabilitan las interrupciones
 	__disable_irq();
+
+	//desabilitar el SPI
+	LL_SPI_Disable(SPI1);
+
+	//limpiar RX
+	while(LL_SPI_GetRxFIFOLevel(SPI1) != LL_SPI_RX_FIFO_EMPTY){
+		(void)LL_SPI_ReceiveData8(SPI1);
+	}
 
 	//se deshabilita el canal de transmision
 	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
@@ -2162,6 +2332,11 @@ void Spi::recibir() {
 		return;
 	}
 	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_ClearFlag_HT1(DMA1);
+	LL_DMA_ClearFlag_TC1(DMA1);
+	LL_DMA_ClearFlag_TE1(DMA1);
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_1);
 	LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_1, (uint32_t)bufferDma);
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, (MAX_PACKET_SIZE*2));
 	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
@@ -2171,13 +2346,25 @@ void Spi::recibir() {
 
 Spi spi;
 
+extern "C" void SPI_ResyncRX(void) {
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+	LL_DMA_ClearFlag_TC2(DMA1);
+	LL_DMA_ClearFlag_TE2(DMA1);
+	LL_SPI_DisableDMAReq_TX(SPI1);
+	LL_SPI_DisableDMAReq_RX(SPI1);
+	LL_SPI_Disable(SPI1);
+	spi.recibir();
+}
+
 extern "C" void SPI_DMA_RX_Callback(void) {
 	uint8_t* paquete = nullptr;
 	if (LL_DMA_IsActiveFlag_HT1(DMA1)) {
 		LL_DMA_ClearFlag_HT1(DMA1);
 		paquete = (uint8_t*)&spi.bufferDma[0];
 		spi.recibirReporte(paquete);
-	}else if (LL_DMA_IsActiveFlag_TC1(DMA1)) {
+	}
+	if (LL_DMA_IsActiveFlag_TC1(DMA1)) {
 		LL_DMA_ClearFlag_TC1(DMA1);
 		paquete = (uint8_t*)&spi.bufferDma[MAX_PACKET_SIZE];
 		spi.recibirReporte(paquete);
@@ -2241,14 +2428,27 @@ FILE PATH: ./Core/Src/stm32g4xx_it.c
 /* USER CODE BEGIN PV */
 //las velocidades objetivos
 extern volatile uint32_t velObjetivos;
-extern volatile uint16_t adc_buffer[5];
+extern volatile uint16_t adc_buffer[4];
+extern volatile uint16_t adc_buffer2[2];
 static uint32_t batFiltrada = 0;
+//tiempo
 uint64_t ms = 0;
+
+//variables de la evacion de mimite
 uint64_t tiempo = 0;
 uint16_t TRetroceso = 1000;
-
 uint8_t evasion = 0;
 
+//variables de la evacion de stall
+volatile uint32_t tiempo_st = 0;
+uint16_t TStall = 250;
+volatile uint8_t stall = 0;
+
+//variables de la direccion del stall
+volatile uint8_t stall_dir1 = 0;
+volatile uint8_t stall_dir2 = 0;
+
+//variables de los comparadores
 uint8_t tcrt1 = 0;
 uint8_t tcrt2 = 0;
 uint8_t tcrt3 = 0;
@@ -2277,6 +2477,7 @@ static int16_t velActual_2 = 0;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 extern void SPI_DMA_RX_Callback(void);
+extern void SPI_ResyncRX(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -2286,6 +2487,7 @@ extern void SPI_DMA_RX_Callback(void);
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_adc2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -2467,12 +2669,32 @@ void DMA1_Channel3_IRQHandler(void)
 	if(LL_DMA_IsActiveFlag_TC3(DMA1)) {
 		LL_DMA_ClearFlag_TC3(DMA1);
 	}
+	if(LL_DMA_IsActiveFlag_HT3(DMA1)) {
+		LL_DMA_ClearFlag_HT3(DMA1);
+	}
+	if(LL_DMA_IsActiveFlag_TE3(DMA1)) {
+		LL_DMA_ClearFlag_TE3(DMA1);
+	}
 	return;
   /* USER CODE END DMA1_Channel3_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc1);
   /* USER CODE BEGIN DMA1_Channel3_IRQn 1 */
 
   /* USER CODE END DMA1_Channel3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 channel4 global interrupt.
+  */
+void DMA1_Channel4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc2);
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 1 */
 }
 
 /**
@@ -2485,7 +2707,7 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 	TIM1->SR = ~TIM_SR_BIF;
 
 	//se envia una señal al esp32
-	GPIOC->BSRR = GPIO_PIN_9;
+	GPIOC->BSRR = GPIO_PIN_12;
 
 	//verifica si estamos en evacion
 	if(evasion == 1){
@@ -2497,9 +2719,9 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 
 	//se guarga el estado de los comparadores
 	tcrt1 = (COMP1->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt2 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	tcrt4 = (COMP4->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	tcrt2 = (COMP7->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	//tcrt3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
+	tcrt4 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
 
 	//detonante de la secuencia de frenado
 	tiempo = ms;
@@ -2539,8 +2761,8 @@ void TIM6_DAC_IRQHandler(void)
 			//apagamos el freno para poder salir de la linea
 			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
 			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4);
+			//LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
 
 			//limpiar la bandera de freno
 			LL_TIM_ClearFlag_BRK(TIM1);
@@ -2570,8 +2792,8 @@ void TIM6_DAC_IRQHandler(void)
 				//reactivamos el freno para que no se salga de la linea
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4);
+				//LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
 
 				//limpiamos bandera
 				LL_TIM_ClearFlag_BRK(TIM1);
@@ -2593,7 +2815,60 @@ void TIM6_DAC_IRQHandler(void)
 			return;
 		}
 
-		GPIOC->BSRR = (GPIO_PIN_9 << 16U);
+		if(stall == 1) {
+			//desactibar el AWD
+			ADC1->IER &= ~ADC_IER_AWD2IE;
+			ADC2->IER &= ~ADC_IER_AWD2IE;
+
+			//ejecutamos la maniobra
+			if((ms - tiempo_st) <= TStall) {
+				//accion de retroceso direccion opuesta
+				if (stall_dir1 > 0) {
+					TIM1->CCR1 = stall_dir1;
+					TIM1->CCR2 = 0;
+				} else if (stall_dir1 < 0) {
+					TIM1->CCR1 = 0;
+					TIM1->CCR2 = -stall_dir1;
+				} else {
+					TIM1->CCR1 = 1023;
+					TIM1->CCR2 = 1023;
+				}
+
+				if (stall_dir2 > 0) {
+					TIM1->CCR3 = stall_dir2;
+					TIM1->CCR4 = 0;
+				} else if (stall_dir2 < 0) {
+					TIM1->CCR3 = 0;
+					TIM1->CCR4 = -stall_dir2;
+				} else {
+					TIM1->CCR3 = 1023;
+					TIM1->CCR4 = 1023;
+				}
+			}else{
+				//termino la maniobra
+				stall = 0;
+				velActual_1 = 0;
+				velActual_2 = 0;
+				v1_obj = 0;
+				v2_obj = 0;
+
+				//frenamos el robot esperando ordenes del esp32
+				TIM1->CCR1 = 1023;
+				TIM1->CCR2 = 1023;
+				TIM1->CCR3 = 1023;
+				TIM1->CCR4 = 1023;
+
+				//reactivamos el AWD y limpiamos la bandera
+				ADC1->ISR = ADC_ISR_AWD2;
+				ADC2->ISR = ADC_ISR_AWD2;
+				ADC1->IER |= ADC_IER_AWD2IE;
+				ADC2->IER |= ADC_IER_AWD2IE;
+			}
+			LL_TIM_EnableAllOutputs(TIM1);
+			return;
+		}
+
+		GPIOC->BSRR = (GPIO_PIN_12 << 16U);
 
 		//verificar si esta sobre el borde
 		if(!(TIM1->BDTR & TIM_BDTR_MOE)) {
@@ -2655,11 +2930,11 @@ void TIM6_DAC_IRQHandler(void)
 
 		//se verifica si es la primera vez que se lee el voltaje de la bateria
 		if(batFiltrada == 0){
-			batFiltrada = adc_buffer[4] << 4;
+			batFiltrada = adc_buffer[3] << 4;
 		}
 
 		//filtro
-		batFiltrada = batFiltrada - (batFiltrada >> 4) + (adc_buffer[4]);
+		batFiltrada = batFiltrada - (batFiltrada >> 4) + (adc_buffer[3]);
 
 		uint32_t batReal = batFiltrada >> 4;
 
@@ -2717,38 +2992,90 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
+/**
+  * @brief This function handles TIM7 global interrupt, DAC2 and DAC4 channel underrun error interrupts.
+  */
+void TIM7_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_DAC_IRQn 0 */
+
+  /* USER CODE END TIM7_DAC_IRQn 0 */
+  /* USER CODE BEGIN TIM7_DAC_IRQn 1 */
+
+  /* USER CODE END TIM7_DAC_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
 /**
-  * @brief This function handles EXTI line4 interrupt.
+  * @brief This function handles EXTI line[15:10] interrupts (NSS PA15, fin de trama).
   */
-void EXTI4_IRQHandler(void)
+void EXTI15_10_IRQHandler(void)
 {
-	//accion de evasion de glitches
-	if(LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_4) != RESET)
+	if(LL_EXTI_IsActiveFlag_0_31(LL_EXTI_LINE_15) != RESET)
 	{
-		//lismpiamos la bandera
-		LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_4);
+		LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_15);
 
-		//verificamos si termino la transferencia
+		//si el DMA esta alineado (0, 20 o 40 bytes pendientes) no hay nada que corregir
 		uint32_t cndtr = LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_1);
-
 		if(cndtr == 0 || cndtr == MAX_PACKET_SIZE || cndtr == MAX_PACKET_SIZE*2){
 			return;
 		}
 
-		//desactivamos los canales DMA
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+		SPI_ResyncRX();
+	}
+}
 
-		//limpiamos la bandera de error del spi
-		LL_DMA_ClearFlag_HT1(DMA1);
-		LL_DMA_ClearFlag_TC1(DMA1);
+void ADC1_2_IRQHandler(void)
+{
+	// variables para almacenar el estado de los registros ISR
+	uint32_t isr1 = ADC1->ISR;
+	uint32_t isr2 = ADC2->ISR;
 
-		//forazamos que inicie donde debe el canal 1
-		LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, (MAX_PACKET_SIZE*2));
+	//validamos si hubo stall
+	if(isr1 & ADC_ISR_AWD2){
+		//accion de proteccion por sobrevoltaje
+		TIM1->EGR |= TIM_EGR_BG;
 
-		//reactivamos el canal
-		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+		//verificar estado actual
+		if (stall == 0) {
+			//activamos la evasion del stall
+			stall = 1;
+			tiempo_st = ms;
+			//notificamos al esp32
+			GPIOC->BSRR = GPIO_PIN_12;
+			//determinar la direccion del stall
+			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
+			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
+		}
+		//limpiar la bandera
+		ADC1->ISR = ADC_ISR_AWD2;
+	}
+	if(isr2 & ADC_ISR_AWD2){
+		//accion de proteccion por sobrevoltaje
+		TIM1->EGR |= TIM_EGR_BG;
+		//verificar estado actual
+		if (stall == 0) {
+			//activamos la evasion del stall
+			stall = 1;
+			tiempo_st = ms;
+			//notificamos al esp32
+			GPIOC->BSRR = GPIO_PIN_12;
+			//determinar la direccion del stall
+			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
+			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
+		}
+		//limpiar la bandera
+		ADC2->ISR = ADC_ISR_AWD2;
+	}
+	if(isr1 & ADC_ISR_AWD1){
+		//se limpiar la bandera de interrupcion
+		ADC1->ISR = ADC_ISR_AWD1;
+
+		//se marca la deteccion
+		tcrt3 = 1;
+
+		//frenado de emergencia
+		TIM1->EGR |= TIM_EGR_BG;
 	}
 }
 /* USER CODE END 1 */
@@ -2841,10 +3168,7 @@ void MX_TIM1_Init(void)
   LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
   LL_TIM_SetBreakInputSourcePolarity(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2, LL_TIM_BKIN_POLARITY_HIGH);
   LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-  LL_TIM_SetBreakInputSourcePolarity(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3, LL_TIM_BKIN_POLARITY_HIGH);
-  LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-  LL_TIM_SetBreakInputSourcePolarity(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4, LL_TIM_BKIN_POLARITY_HIGH);
-  LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP4);
+  LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
   TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_ENABLE;
   TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_ENABLE;
   TIM_BDTRInitStruct.LockLevel = LL_TIM_LOCKLEVEL_OFF;
@@ -2862,13 +3186,30 @@ void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
     /**TIM1 GPIO Configuration
+    PC2     ------> TIM1_CH3
+    PC3     ------> TIM1_CH4
     PA8     ------> TIM1_CH1
     PA9     ------> TIM1_CH2
-    PA10     ------> TIM1_CH3
-    PA11     ------> TIM1_CH4
     */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
@@ -2883,22 +3224,6 @@ void MX_TIM1_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_11;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }

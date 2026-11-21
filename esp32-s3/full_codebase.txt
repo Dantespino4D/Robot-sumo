@@ -7,8 +7,8 @@ FILE PATH: ./components/actuadores/Velocidades.cpp
 #include "Velocidades.h"
 #include "esp_attr.h"
 
-DRAM_ATTR int16_t vels_1[ESTADOS] = {0, 700, -700, 950, -950, 800, -800, 950, -950, 600, -600, 950, -950, 1023, -1023, 950};
-DRAM_ATTR int16_t vels_2[ESTADOS] = {0, 700, -700, 200, -200, 950, -950, 800, -800, 950, -950, 600, -600, 1023, -1023, -800};
+DRAM_ATTR int16_t vels_1[ESTADOS] = {0, 700, -700, 800, -800, 950, -950, 600, -600, 950, -950, 1023, -1023, 950};
+DRAM_ATTR int16_t vels_2[ESTADOS] = {0, 700, -700, 950, -950, 800, -800, 950, -950, 600, -600, 1023, -1023, -800};
 
 
 
@@ -201,8 +201,6 @@ void Mqtt::configuracion_json(esp_mqtt_event_handle_t evento){
 		extraerM(motores, "pronunciado", "velocidad_pI", "velocidad_pD");
 		extraerM(motores, "maximo", "velocidad_mI", "velocidad_mD");
 		extraerM(motores, "giro", "velocidad_gI", "velocidad_gD");
-		extraerM(motores, "evasion", "velocidad_eI", "velocidad_eD");
-		extraerM(motores, "huida", "velocidad_hI", "velocidad_hD");
 	}
 
 	//se revisa y aplican cambios en la configuracion de los tiempo
@@ -213,8 +211,6 @@ void Mqtt::configuracion_json(esp_mqtt_event_handle_t evento){
 		extraer(tiempos, "retroceso", "tiempos");
 		extraer(tiempos, "recta_star", "tiempos");
 		extraer(tiempos, "giro_star", "tiempos");
-		extraer(tiempos, "t_stall", "tiempos");
-		extraer(tiempos, "evasion", "tiempos");
 	}
 
 	//se revisa y aplican cambios en la configuracion de los limites de los sensores
@@ -466,10 +462,13 @@ void Spi::armarOrden(int16_t obj_1, int16_t obj_2){
 }
 
 void Spi::enviarRecibir(uint8_t* mensaje, uint8_t* respuesta, size_t size){
+	if(transaccionEnCurso){
+		return;
+	}
 	transmision.length = size * 8;
 	transmision.tx_buffer = mensaje;
 	transmision.rx_buffer = respuesta;
-	esp_err_t err = spi_device_queue_trans(stm32_handle, &transmision, portMAX_DELAY);
+	esp_err_t err = spi_device_queue_trans(stm32_handle, &transmision, 0);
 	if(err == ESP_OK){
 		transaccionEnCurso = true;
 	}else{
@@ -528,9 +527,12 @@ void Spi::recolectar(){
 
 	spi_transaction_t* tran;
 
-	esp_err_t err = spi_device_get_trans_result(stm32_handle, &tran, portMAX_DELAY);
-	if(err != ESP_OK){
+	esp_err_t err = spi_device_get_trans_result(stm32_handle, &tran, 0);
+	if(err == ESP_ERR_TIMEOUT){
+		return;
+	}if(err != ESP_OK){
 		fallos++;
+		transaccionEnCurso = false;
 		return;
 	}else{
 		transaccionEnCurso = false;
@@ -613,9 +615,8 @@ Telemetria::Telemetria(MaquinaEstados* e, Mqtt* q, Wifi* w):
 {}
 
 void Telemetria::recopilar(){
-	bool _stall = false;
 	me->datos(&d.estado, &d.estrategia, &d.ciclo, &d.inicio);
-	d.stall = _stall ? 1 : 0;
+	d.evasion = me->getEvasion() ? 1 : 0;
 
 	wf->signalW(&d.wifi);
 	d.tiempo = xTaskGetTickCount() * portTICK_PERIOD_MS;
@@ -629,12 +630,15 @@ void Telemetria::enviar(){
 
 	// JSON estricto. Cero ramas condicionales. Cero variables de prototipo o sensores inútiles.
 	int lon = snprintf(json, NJSON,
-		"{\"sistema\":{\"commit\":%d,\"tiempo\":%" PRIu32 ",\"heap\":%" PRIu32 ",\"pila\":%f,\"wifi\":%d,\"ciclo\":%d},\"estado\":{\"modo\":%d,\"estrategia\":%d,\"inicio\":%d},\"stm32\":{\"pwm_izq\":%d,\"pwm_der\":%d,\"stall\":%d,\"corriente\":%f},\"sensores\":{\"tof\":[%d,%d,%d,%d,%d,%d],\"f_estado\":[%d,%d,%d,%d,%d,%d]}}",
-		COMMIT, d.tiempo, d.heap, d.pila, d.wifi, d.ciclo,
+		"{\"sistema\":{\"commit\":%d,\"tiempo\":%" PRIu32 ",\"heap\":%" PRIu32 ",\"bateria\":%u,\"wifi\":%d,\"evasion\":%d,\"ciclo\":%d},"
+		"\"estado\":{\"modo\":%d,\"estrategia\":%d,\"inicio\":%d},"
+		"\"motores\":{\"pwm_izq\":%d,\"pwm_der\":%d,\"drv1\":%u,\"drv2\":%u,\"drv3\":%u,\"drv4\":%u},"
+		"\"sensores\":{\"tof\":[%u,%u,%u,%u,%u,%u],\"f_estado\":[%u,%u,%u,%u,%u,%u]}}",
+		COMMIT, d.tiempo, d.heap, (unsigned)d.bateria, d.wifi, d.evasion, d.ciclo,
 		d.estado, d.estrategia, d.inicio,
-		d.pwm1, d.pwm2, d.stall, d.corriente,
-		d.ToF1, d.ToF2, d.ToF3, d.ToF4, d.ToF5, d.ToF6,
-		d.estadoToF1, d.estadoToF2, d.estadoToF3, d.estadoToF4, d.estadoToF5, d.estadoToF6
+		d.pwm1, d.pwm2, (unsigned)d.drv1, (unsigned)d.drv2, (unsigned)d.drv3, (unsigned)d.drv4,
+		(unsigned)d.ToF1, (unsigned)d.ToF2, (unsigned)d.ToF3, (unsigned)d.ToF4, (unsigned)d.ToF5, (unsigned)d.ToF6,
+		(unsigned)d.estadoToF1, (unsigned)d.estadoToF2, (unsigned)d.estadoToF3, (unsigned)d.estadoToF4, (unsigned)d.estadoToF5, (unsigned)d.estadoToF6
 	);
 
 	if(lon > 0){
@@ -1019,47 +1023,48 @@ FILE PATH: ./components/configuracion/pines.h
 #include "driver/gpio.h"
 
     // inicio
-    #define INI GPIO_NUM_35
+    #define INI GPIO_NUM_48
 
 	//interrupcion stm32
-	#define STM32_INT GPIO_NUM_5
+	#define STM32_INT GPIO_NUM_14
 
 	//musica
-    #define MUS GPIO_NUM_3
+    #define MUS GPIO_NUM_4
 
 	//spi
-	#define SPI_MOSI GPIO_NUM_42
-	#define SPI_MISO GPIO_NUM_41
-	#define SPI_CLK GPIO_NUM_40
-	#define SPI_CS GPIO_NUM_39
+	#define SPI_MOSI GPIO_NUM_11
+	#define SPI_MISO GPIO_NUM_12
+	#define SPI_CLK GPIO_NUM_13
+	#define SPI_CS GPIO_NUM_10
 
     // I2C
-    #define SDA GPIO_NUM_8
-    #define SCL GPIO_NUM_9
+    #define SDA GPIO_NUM_5
+    #define SCL GPIO_NUM_6
 
     // ToF XSHUT
-    #define XSHUT_1 GPIO_NUM_11
-    #define XSHUT_2 GPIO_NUM_12
-    #define XSHUT_3 GPIO_NUM_13
-    #define XSHUT_4 GPIO_NUM_14
-    #define XSHUT_5 GPIO_NUM_16
-    #define XSHUT_6 GPIO_NUM_17
+    #define XSHUT_1 GPIO_NUM_41
+    #define XSHUT_2 GPIO_NUM_42
+    #define XSHUT_3 GPIO_NUM_44
+    #define XSHUT_4 GPIO_NUM_16
+    #define XSHUT_5 GPIO_NUM_15
+    #define XSHUT_6 GPIO_NUM_7
 
     // ToF Interrupciones
-    #define INT_1 GPIO_NUM_15
-    #define INT_2 GPIO_NUM_4
-    #define INT_3 GPIO_NUM_38
-    #define INT_4 GPIO_NUM_48
+    #define INT_1 GPIO_NUM_38
+    #define INT_2 GPIO_NUM_39
+    #define INT_3 GPIO_NUM_40
+    #define INT_4 GPIO_NUM_8
     #define INT_5 GPIO_NUM_18
-    #define INT_6 GPIO_NUM_47
+    #define INT_6 GPIO_NUM_17
 
     // LED RGB
-    #define RGB_PIN_A GPIO_NUM_43
-    #define RGB_PIN_B GPIO_NUM_44
+    #define RGB_PIN_R GPIO_NUM_43
+    #define RGB_PIN_G GPIO_NUM_2
+	#define RGB_PIN_B GPIO_NUM_1
 
     // Botones Auxiliares
-    #define VIC GPIO_NUM_36
-    #define DER GPIO_NUM_37
+    #define VIC GPIO_NUM_47
+    #define DER GPIO_NUM_21
 #endif
 
 
@@ -1077,6 +1082,7 @@ struct Datos{
 	int estado;
 	int estrategia;
 	int inicio;
+	int evasion;
 
 	//variable de los sensores ToF
 	uint16_t ToF1;
@@ -1109,15 +1115,15 @@ struct Datos{
 	uint16_t ambienteToF6;
 
 	//variable de la pila
-	float pila;
-	float corriente;
+	uint16_t bateria;
 
 	//variables de los motores
 	int16_t pwm1;
 	int16_t pwm2;
-	int16_t pwm1_obj;
-	int16_t pwm2_obj;
-	int stall;
+	uint16_t drv1;
+	uint16_t drv2;
+	uint16_t drv3;
+	uint16_t drv4;
 
 	//variables del sistema
 	uint32_t tiempo;
@@ -1146,8 +1152,6 @@ enum Estado {
 	ALTO,
 	DIR_A,
 	DIR_B,
-	EVA_A,
-	EVA_B,
 	ATAQUE_AI,
 	ATAQUE_BI,
 	ATAQUE_AD,
@@ -1182,55 +1186,39 @@ void Estrategia1::ejecucion(MaquinaEstados* ctx){
 	ctx->spi->recolectar();
 
 	switch (ctx->modo) {
-		case -4:
-			com = EVA_A;
-			break;
-		case -3:
-			com = EVA_B;
-			break;
-        case -2:
-            com = MAX_A;
-			ctx->memo_TC = 9;
-			ctx->tempTC = temp;
-            break;
-        case -1:
-            com = ATAQUE_AI;
-			ctx->memo_TC = 5;
-			ctx->tempTC = temp;
-			break;
         case 0:
             com = MAX_A;
 			ctx->memo_TC = 9;
 			ctx->tempTC = temp;
             break;
         case 1:
+            com = ATAQUE_AI;
+			ctx->memo_TC = 5;
+			ctx->tempTC = temp;
+			break;
+        case 2:
+            com = MAX_A;
+			ctx->memo_TC = 9;
+			ctx->tempTC = temp;
+            break;
+        case 3:
             com = ATAQUE_AD;
 			ctx->memo_TC = 6;
 			ctx->tempTC = temp;
             break;
-        case 2:
+        case 4:
             com = PRO_AI;
 			ctx->memo_TC = 1;
 			ctx->tempTC = temp;
 			break;
-        case 3:
+        case 5:
             com = DIR_A;
 			ctx->memo_TC = 9;
 			ctx->tempTC = temp;
             break;
-        case 4:
+        case 6:
             com = PRO_AD;
 			ctx->memo_TC = 2;
-			ctx->tempTC = temp;
-            break;
-        case 5:
-            com = MAX_B;
-			ctx->memo_TC = 10;
-			ctx->tempTC = temp;
-            break;
-        case 6:
-            com = ATAQUE_BI;
-			ctx->memo_TC = 7;
 			ctx->tempTC = temp;
             break;
         case 7:
@@ -1239,86 +1227,96 @@ void Estrategia1::ejecucion(MaquinaEstados* ctx){
 			ctx->tempTC = temp;
             break;
         case 8:
+            com = ATAQUE_BI;
+			ctx->memo_TC = 7;
+			ctx->tempTC = temp;
+            break;
+        case 9:
+            com = MAX_B;
+			ctx->memo_TC = 10;
+			ctx->tempTC = temp;
+            break;
+        case 10:
             com = ATAQUE_BD;
 			ctx->memo_TC = 8;
 			ctx->tempTC = temp;
             break;
-        case 9:
+        case 11:
             com = PRO_BI;
 			ctx->memo_TC = 3;
 			ctx->tempTC = temp;
             break;
-        case 10:
+        case 12:
             com = DIR_B;
 			ctx->memo_TC = 10;
 			ctx->tempTC = temp;
             break;
-        case 11:
+        case 13:
             com = PRO_BD;
 			ctx->memo_TC = 4;
 			ctx->tempTC = temp;
             break;
-		case 12:
+		case 14:
 			com = PRO_AI;
 			ctx->memo_TL = 1;
 			ctx->tempTL = temp;
 			break;
-		case 13:
+		case 15:
 			com = PRO_AD;
 			ctx->memo_TL = 2;
 			ctx->tempTL = temp;
 			break;
-		case 14:
+		case 16:
 			com = PRO_BI;
 			ctx->memo_TL = 3;
 			ctx->tempTL = temp;
 			break;
-		case 15:
+		case 17:
 			com = PRO_BD;
 			ctx->memo_TL = 4;
 			ctx->tempTL = temp;
 			break;
-		case 16:
+		case 18:
 			com = ATAQUE_AI;
 			ctx->memo_TL = 1;
 			ctx->tempTL = temp;
 			break;
-		case 17:
+		case 19:
 			com = ATAQUE_AD;
 			ctx->memo_TL = 2;
 			ctx->tempTL = temp;
 			break;
-		case 18:
+		case 20:
 			com = ATAQUE_BI;
 			ctx->memo_TL = 3;
 			ctx->tempTL = temp;
 			break;
-		case 19:
+		case 21:
 			com = ATAQUE_BD;
 			ctx->memo_TL = 4;
 			ctx->tempTL = temp;
 			break;
-		case 20:
+		case 22:
 			com = MAX_A;
 			ctx->memo_TL = 0;
 			break;
-		case 21:
+		case 23:
 			com = MAX_B;
 			ctx->memo_TL = 0;
 			break;
-		case 22:
+		case 24:
 			com = PRO_AI;
 			break;
-		case 23:
+		case 25:
 			com = PRO_AD;
 			break;
-		case 24:
+		case 26:
 			com = PRO_BI;
 			break;
-		case 25:
+		case 27:
 			com = PRO_BD;
 			break;
-		case 26:
+		case 28:
 			if (temp - ctx->tempE1 >= (unsigned long)ctx->tiempo4) {
 				com = GIRO;
     			ctx->memo_E = false;
@@ -1327,7 +1325,7 @@ void Estrategia1::ejecucion(MaquinaEstados* ctx){
       			com = DIR_A;
 			}
       		break;
-		case 27:
+		case 29:
     		if(temp - ctx->tempE2 >= (unsigned long)ctx->tiempo5){
 				com = DIR_A;
     		    ctx->memo_E = true;
@@ -1380,55 +1378,39 @@ void Estrategia2::ejecucion(MaquinaEstados* ctx) {
 	ctx->spi->recolectar();
 
 	switch (ctx->modo) {
-		case -4:
-			com = EVA_A;
-			break;
-		case -3:
-			com = EVA_B;
-			break;
-        case -2:
-            com = MAX_A;
-			ctx->memo_TC = 9;
-			ctx->tempTC = temp;
-            break;
-        case -1:
-            com = ATAQUE_AI;
-			ctx->memo_TC = 5;
-			ctx->tempTC = temp;
-			break;
         case 0:
             com = MAX_A;
 			ctx->memo_TC = 9;
 			ctx->tempTC = temp;
             break;
         case 1:
+            com = ATAQUE_AI;
+			ctx->memo_TC = 5;
+			ctx->tempTC = temp;
+			break;
+        case 2:
+            com = MAX_A;
+			ctx->memo_TC = 9;
+			ctx->tempTC = temp;
+            break;
+        case 3:
             com = ATAQUE_AD;
 			ctx->memo_TC = 6;
 			ctx->tempTC = temp;
             break;
-        case 2:
+        case 4:
             com = PRO_AI;
 			ctx->memo_TC = 1;
 			ctx->tempTC = temp;
 			break;
-        case 3:
+        case 5:
             com = DIR_A;
 			ctx->memo_TC = 9;
 			ctx->tempTC = temp;
             break;
-        case 4:
+        case 6:
             com = PRO_AD;
 			ctx->memo_TC = 2;
-			ctx->tempTC = temp;
-            break;
-        case 5:
-            com = MAX_B;
-			ctx->memo_TC = 10;
-			ctx->tempTC = temp;
-            break;
-        case 6:
-            com = ATAQUE_BI;
-			ctx->memo_TC = 7;
 			ctx->tempTC = temp;
             break;
         case 7:
@@ -1437,86 +1419,96 @@ void Estrategia2::ejecucion(MaquinaEstados* ctx) {
 			ctx->tempTC = temp;
             break;
         case 8:
+            com = ATAQUE_BI;
+			ctx->memo_TC = 7;
+			ctx->tempTC = temp;
+            break;
+        case 9:
+            com = MAX_B;
+			ctx->memo_TC = 10;
+			ctx->tempTC = temp;
+            break;
+        case 10:
             com = ATAQUE_BD;
 			ctx->memo_TC = 8;
 			ctx->tempTC = temp;
             break;
-        case 9:
+        case 11:
             com = PRO_BI;
 			ctx->memo_TC = 3;
 			ctx->tempTC = temp;
             break;
-        case 10:
+        case 12:
             com = DIR_B;
 			ctx->memo_TC = 10;
 			ctx->tempTC = temp;
             break;
-        case 11:
+        case 13:
             com = PRO_BD;
 			ctx->memo_TC = 4;
 			ctx->tempTC = temp;
             break;
-		case 12:
+		case 14:
 			com = PRO_AI;
 			ctx->memo_TL = 1;
 			ctx->tempTL = temp;
 			break;
-		case 13:
+		case 15:
 			com = PRO_AD;
 			ctx->memo_TL = 2;
 			ctx->tempTL = temp;
 			break;
-		case 14:
+		case 16:
 			com = PRO_BI;
 			ctx->memo_TL = 3;
 			ctx->tempTL = temp;
 			break;
-		case 15:
+		case 17:
 			com = PRO_BD;
 			ctx->memo_TL = 4;
 			ctx->tempTL = temp;
 			break;
-		case 16:
+		case 18:
 			com = ATAQUE_AI;
 			ctx->memo_TL = 1;
 			ctx->tempTL = temp;
 			break;
-		case 17:
+		case 19:
 			com = ATAQUE_AD;
 			ctx->memo_TL = 2;
 			ctx->tempTL = temp;
 			break;
-		case 18:
+		case 20:
 			com = ATAQUE_BI;
 			ctx->memo_TL = 3;
 			ctx->tempTL = temp;
 			break;
-		case 19:
+		case 21:
 			com = ATAQUE_BD;
 			ctx->memo_TL = 4;
 			ctx->tempTL = temp;
 			break;
-		case 20:
+		case 22:
 			com = MAX_A;
 			ctx->memo_TL = 0;
 			break;
-		case 21:
+		case 23:
 			com = MAX_B;
 			ctx->memo_TL = 0;
 			break;
-		case 22:
+		case 24:
 			com = PRO_AD;
 			break;
-		case 23:
+		case 25:
 			com = PRO_AI;
 			break;
-		case 24:
+		case 26:
 			com = PRO_BD;
 			break;
-		case 25:
+		case 27:
 			com = PRO_BI;
 			break;
-		case 26:
+		case 28:
 			if (temp - ctx->tempE1 >= (unsigned long)ctx->tiempo4) {
 				com = GIRO;
     			ctx->memo_E = false;
@@ -1525,7 +1517,7 @@ void Estrategia2::ejecucion(MaquinaEstados* ctx) {
       			com = DIR_A;
 			}
       		break;
-		case 27:
+		case 29:
     		if(temp - ctx->tempE2 >= (unsigned long)ctx->tiempo5){
 				com = DIR_A;
     		    ctx->memo_E = true;
@@ -1597,139 +1589,131 @@ void EstrategiaEstandar::seleccion(MaquinaEstados* ctx) {
 	//se reciben los bits de los sensores
 	uint32_t noti = 0;
 	noti = xEventGroupGetBits(eventos);
-
-	if(ctx->stall) {//quizas se reestructure
-		ctx->modo = (ctx->memo_eva == 1) ? 0 : 1;
-		return;
-	}else if(false) {//se dejara en false por ahora
-		ctx->tempEva = (xTaskGetTickCount() * portTICK_PERIOD_MS);
-		ctx->modo = (ctx->memo_eva == 1) ? 0 : 1;
-		return;
 	//se detecta si los sensores 1, 2, y 3 o sus convinaciones fueron activados
-	}else if(noti & MASK_TOF_A) {
+	if(noti & MASK_TOF_A) {
 		//si detecta al robot por ToF1, ToF2 y ToF3
 		if((noti & MASK_TOF_A) == MASK_TOF_A) {
-			ctx->modo = 2;
+			ctx->modo = 0;
 		}
 		//si detecta al robot por ToF1 y Tof2
 		else if((noti & MASK_TOF_1_2) == MASK_TOF_1_2) {
-			ctx->modo = 3;
+			ctx->modo = 1;
 		}
 		//si detecta al robot por ToF1 y ToF3
 		else if((noti & MASK_TOF_1_3) == MASK_TOF_1_3) {
-			ctx->modo = 4;
+			ctx->modo = 2;
 		}
 		//si detecta al robot por ToF2 y ToF3
 		else if((noti & MASK_TOF_2_3) == MASK_TOF_2_3) {
-			ctx->modo = 5;
+			ctx->modo = 3;
 		}
 		// si detecta el robot por ToF1
 		else if (noti & BIT_TOF_AI) {
-			ctx->modo = 6;
+			ctx->modo = 4;
 		}
 		// si detecta el robot por ToF2
 		else if (noti & BIT_TOF_AC) {
-			ctx->modo = 7;
+			ctx->modo = 5;
 		}
 		//si detecta al robot por ToF3
 		else if (noti & BIT_TOF_AD) {
-		  	ctx->modo = 8;
+		  	ctx->modo = 6;
 		}
 	//detecta si los sensores 4, 5, y 6 o sus convinaciones fueron activados
 	}else if(noti & MASK_TOF_B) {
 		//si detecta al robot por ToF4, ToF5 y ToF6
 		if((noti & MASK_TOF_B) == MASK_TOF_B) {
-			ctx->modo = 9;
+			ctx->modo = 7;
 		}
 		//si detecta al robot por ToF4 y ToF5
 		else if((noti & MASK_TOF_4_5) == MASK_TOF_4_5) {
-			ctx->modo = 10;
+			ctx->modo = 8;
 		}
 		//si detecta al robot por ToF4 y ToF6
 		else if((noti & MASK_TOF_4_6) == MASK_TOF_4_6) {
-			ctx->modo = 11;
+			ctx->modo = 9;
 		}
 		//si detecta al robot por ToF5 y ToF6
 		else if((noti & MASK_TOF_5_6) == MASK_TOF_5_6) {
-			ctx->modo = 12;
+			ctx->modo = 10;
 		}
 		// si detecta al robot por ToF4
 		else if (noti & BIT_TOF_BI) {
-		  	ctx->modo = 13;
+		  	ctx->modo = 11;
 		}
 		// si detecta al robot por ToF5
 		else if (noti & BIT_TOF_BC) {
-			ctx->modo = 14;
+			ctx->modo = 12;
 		}
 		//si detecta al robot por ToF6
 		else if (noti & BIT_TOF_BD) {
-			ctx->modo = 15;
+			ctx->modo = 13;
 		}
 	}else if(ctx->memo_TC != 0 || ctx->memo_TL != 0) {
 		//si deja de detectar al robot por direccion AI_P a corto plazo
 		if (ctx->memo_TC == 1) {
-			ctx->modo = 16;
+			ctx->modo = 14;
 		}
 		//si deja de detectar al robot por direccion AD_P a corto plazo
 		else if (ctx->memo_TC == 2) {
-			ctx->modo = 17;
+			ctx->modo = 15;
 		}
 		//si deja de detectar al robot por direccion BI_P a corto plazo
 		else if (ctx->memo_TC == 3) {
-			ctx->modo = 18;
+			ctx->modo = 16;
 		}
 		//si deja de detectar al robot por direccion BD_P a corto plazo
 		else if (ctx->memo_TC == 4) {
-			ctx->modo = 19;
+			ctx->modo = 17;
 		}
 		//si deja de detectar al robot por direccion AI_S a corto plazo
 		else if (ctx->memo_TC == 5) {
-			ctx->modo = 20;
+			ctx->modo = 18;
 		}
 		//si deja de detectar al robot por direccion AD_S a corto plazo
 		else if (ctx->memo_TC == 6) {
-			ctx->modo = 21;
+			ctx->modo = 19;
 		}
 		//si deja de detectar al robot por direccion BI_S a corto plazo
 		else if (ctx->memo_TC == 7) {
-			ctx->modo = 22;
+			ctx->modo = 20;
 		}
 		//si deja de detectar al robot por direccion BD_S a corto plazo
 		else if (ctx->memo_TC == 8) {
-			ctx->modo = 23;
+			ctx->modo = 21;
 		}
 		//si deja de detectar al robot de frente a corto plazo
 		else if (ctx->memo_TC == 9) {
-			ctx->modo = 24;
+			ctx->modo = 22;
 		}
 		//si deja de detectar al robot por atras a corto plazo
 		else if (ctx->memo_TC == 10) {
-			ctx->modo = 25;
+			ctx->modo = 23;
 		}
 		//si deja de detectar al robot por direccion AI a largo plazo
 		else if (ctx->memo_TL == 1) {
-		  	ctx->modo = 26;
+		  	ctx->modo = 24;
 		}
 		//si deja de detectar al robot por direccion AD a largo plazo
 		else if(ctx->memo_TL == 2) {
-		  	ctx->modo = 27;
+		  	ctx->modo = 25;
 		}
 		//si deja de detectar al robot por direccion BI a largo plazo
 		else if (ctx->memo_TL == 3) {
-			ctx->modo = 28;
+			ctx->modo = 26;
 		}
 		//si deja de detectar al robot por direccion BD a largo plazo
 		else if (ctx->memo_TL == 4) {
-		  	ctx->modo = 29;
+		  	ctx->modo = 27;
 		}
 	}else{
 		//memoria de avance de estrella
 		if (ctx->memo_E) {
-			ctx->modo = 30;
+			ctx->modo = 28;
 		}
 		// si no detecta nada
 		else{
-			ctx->modo = 31;
+			ctx->modo = 29;
 		}
 	}
 }
@@ -2034,13 +2018,11 @@ MaquinaEstados::MaquinaEstados(int _tiempo2, int _tiempo3, int _tiempo4, int _ti
 	tiempo3(_tiempo3),
 	tiempo4(_tiempo4),
 	tiempo5(_tiempo5),
-	tiempo6(1000),
-	modo(-1),
+	modo(29),
 	estrategia(0),
 	ciclo(0),
 	ini(0),
 	spi(_spi),
-	stall(false),
 	memo_eva(0),
 	memo_TC(0),
 	memo_TL(0),
@@ -2081,17 +2063,12 @@ void MaquinaEstados::tiempo(){
 		//tiempo de la memoria a largo plazo
     	memo_TL = 0;
     }
-	if (stall && (temp - tempEva >= (unsigned long)tiempo6)) {
-		//tiempo de la evasion
-		stall = false;
-		memo_eva = 0;
-	}
 }
 
 void MaquinaEstados::logica(){
 	//evaluar si esta en curso la maniobra de evacion
 	if(evasion){
-		spi->armarOrden(vels_1[ALTO], vels_2[ALTO]);
+		spi->armarOrden(0, 0);
 		return;
 	}
 	tiempo();
@@ -2107,7 +2084,6 @@ void MaquinaEstados::nvsLeer(){
 	tiempo3 = nvs.leer("tof_largo_plazo",tiempo3);
 	tiempo4 = nvs.leer("recta_star",tiempo4);
 	tiempo5 = nvs.leer("giro_star",tiempo5);
-	tiempo6 = nvs.leer("evasion", tiempo6);
 	estrategia = nvs.leer("estrategia",estrategia);
 }
 
@@ -2168,8 +2144,7 @@ class MaquinaEstados{
 		int tiempo3;
 		int tiempo4;
 		int tiempo5;
-		int tiempo6;
-	private:
+		private:
 		//variables de control
 		volatile int modo;
 		volatile int estrategia;
@@ -2177,9 +2152,6 @@ class MaquinaEstados{
 		int ini;
 
 		Spi* spi;
-
-		bool stall;
-
 		//variable de la evasion
 		volatile bool evasion;
 
@@ -2222,6 +2194,8 @@ class MaquinaEstados{
 
 		//metodo que define la evasion
 		void definirEvasion(bool _evasion);
+
+		bool getEvasion() const { return evasion; }
 
 		//se obtiene el ciclo
 		void cicloR(int c, int i);
@@ -3376,8 +3350,10 @@ FILE PATH: ./components/ui/rgb.h
 #define LEDC_FREQUENCY          (5000)              // Frecuencia 5 kHz
 
 // --- Configuración LED RGB ---
-#define RGB_CHANNEL_A           LEDC_CHANNEL_4
-#define RGB_CHANNEL_B           LEDC_CHANNEL_5
+// Canal 6 lo usa Musica.cpp; el azul usa el 7.
+#define RGB_CHANNEL_R           LEDC_CHANNEL_4
+#define RGB_CHANNEL_G           LEDC_CHANNEL_5
+#define RGB_CHANNEL_B           LEDC_CHANNEL_7
 
 static inline void pwm_rgb() {
     // 1. Configurar el Timer
@@ -3392,30 +3368,45 @@ static inline void pwm_rgb() {
     ledc_timer_config(&ledc_timer);
 
 
-    // 2. Configurar el Canal A
-    ledc_channel_config_t ledc_channel_a = {
-        .gpio_num       = RGB_PIN_A,
+    // 2. Configurar el Canal R
+    ledc_channel_config_t ledc_channel_r = {
+        .gpio_num       = RGB_PIN_R,
         .speed_mode     = LEDC_MODE,
-        .channel        = RGB_CHANNEL_A,
+        .channel        = RGB_CHANNEL_R,
 		.intr_type      = LEDC_INTR_DISABLE,
         .timer_sel      = LEDC_TIMER,
-        .duty           = 0,
+        .duty           = 1023,
         .hpoint         = 0,
     	.sleep_mode     = LEDC_SLEEP_MODE_KEEP_ALIVE,
     	.flags          = 0,
 		.deconfigure    = false
     };
-    ledc_channel_config(&ledc_channel_a);
+    ledc_channel_config(&ledc_channel_r);
 
 
-    // 3. Configurar el Canal B
+    // 3. Configurar el Canal G
+    ledc_channel_config_t ledc_channel_g = {
+        .gpio_num       = RGB_PIN_G,
+        .speed_mode     = LEDC_MODE,
+        .channel        = RGB_CHANNEL_G,
+		.intr_type      = LEDC_INTR_DISABLE,
+        .timer_sel      = LEDC_TIMER,
+        .duty           = 1023,
+        .hpoint         = 0,
+    	.sleep_mode     = LEDC_SLEEP_MODE_KEEP_ALIVE,
+    	.flags          = 0,
+		.deconfigure    = false
+    };
+    ledc_channel_config(&ledc_channel_g);
+
+    // 4. Configurar el Canal B
     ledc_channel_config_t ledc_channel_b = {
         .gpio_num       = RGB_PIN_B,
         .speed_mode     = LEDC_MODE,
         .channel        = RGB_CHANNEL_B,
 		.intr_type      = LEDC_INTR_DISABLE,
         .timer_sel      = LEDC_TIMER,
-        .duty           = 0,
+        .duty           = 1023,
         .hpoint         = 0,
     	.sleep_mode     = LEDC_SLEEP_MODE_KEEP_ALIVE,
     	.flags          = 0,
@@ -3424,9 +3415,14 @@ static inline void pwm_rgb() {
     ledc_channel_config(&ledc_channel_b);
 }
 
-static inline void set_rgb_a(uint32_t duty) {
-    ledc_set_duty(LEDC_MODE, RGB_CHANNEL_A, duty);
-    ledc_update_duty(LEDC_MODE, RGB_CHANNEL_A);
+static inline void set_rgb_r(uint32_t duty) {
+    ledc_set_duty(LEDC_MODE, RGB_CHANNEL_R, duty);
+    ledc_update_duty(LEDC_MODE, RGB_CHANNEL_R);
+}
+
+static inline void set_rgb_g(uint32_t duty) {
+    ledc_set_duty(LEDC_MODE, RGB_CHANNEL_G, duty);
+    ledc_update_duty(LEDC_MODE, RGB_CHANNEL_G);
 }
 
 static inline void set_rgb_b(uint32_t duty) {
@@ -3435,8 +3431,10 @@ static inline void set_rgb_b(uint32_t duty) {
 }
 
 // Función principal para el LED RGB
-static inline void rgb(int a, int b) {
-    set_rgb_a(a);
+// Ánodo común: duty 1023 = apagado, duty 0 = encendido.
+static inline void rgb(int r, int g, int b = 1023) {
+    set_rgb_r(r);
+    set_rgb_g(g);
     set_rgb_b(b);
 }
 
@@ -3778,11 +3776,6 @@ void begin_hardware() {
 	vels_1[MAX_B] = -vel.leer("velocidad_mI", vels_1[MAX_A]);
 	vels_2[MAX_B] = -vel.leer("velocidad_mD", vels_2[MAX_A]);
 
-	//velocidades de evasion
-	vels_1[EVA_A] = vel.leer("velocidad_eI", vels_1[EVA_A]);
-	vels_2[EVA_A] = vel.leer("velocidad_eD", vels_2[EVA_A]);
-	vels_1[EVA_B] = -vel.leer("velocidad_eI", vels_1[EVA_A]);
-	vels_2[EVA_B] = -vel.leer("velocidad_eD", vels_2[EVA_A]);
 
 	//velocidades del giro de busqueda
 	vels_1[GIRO] = vel.leer("velocidad_gI", vels_1[GIRO]);

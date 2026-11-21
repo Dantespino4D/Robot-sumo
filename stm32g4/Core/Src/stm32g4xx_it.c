@@ -326,7 +326,7 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 	TIM1->SR = ~TIM_SR_BIF;
 
 	//se envia una señal al esp32
-	GPIOC->BSRR = GPIO_PIN_9;
+	GPIOC->BSRR = GPIO_PIN_12;
 
 	//verifica si estamos en evacion
 	if(evasion == 1){
@@ -487,7 +487,7 @@ void TIM6_DAC_IRQHandler(void)
 			return;
 		}
 
-		GPIOC->BSRR = (GPIO_PIN_9 << 16U);
+		GPIOC->BSRR = (GPIO_PIN_12 << 16U);
 
 		//verificar si esta sobre el borde
 		if(!(TIM1->BDTR & TIM_BDTR_MOE)) {
@@ -661,7 +661,7 @@ void ADC1_2_IRQHandler(void)
 			stall = 1;
 			tiempo_st = ms;
 			//notificamos al esp32
-			GPIOC->BSRR = GPIO_PIN_9;
+			GPIOC->BSRR = GPIO_PIN_12;
 			//determinar la direccion del stall
 			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
 			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
@@ -678,7 +678,7 @@ void ADC1_2_IRQHandler(void)
 			stall = 1;
 			tiempo_st = ms;
 			//notificamos al esp32
-			GPIOC->BSRR = GPIO_PIN_9;
+			GPIOC->BSRR = GPIO_PIN_12;
 			//determinar la direccion del stall
 			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
 			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
