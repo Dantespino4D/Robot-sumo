@@ -12,6 +12,8 @@
 #include "protocolo/Crc8Table.h"
 
 #define TAG "spi"
+#define TRET_MAX 1500
+#define TRET_MIN 100
 
 Spi::Spi():
 	telemetria{},
@@ -99,6 +101,16 @@ void Spi::enviarConfiguracion(){
 	conf->id = ID_CONF;
 	conf->u_limite = sensores.leer("umbral_color", 1000);//valor por defecto a definir en el futuro
 	conf->t_ret = tiempos.leer("retroceso", 1000);//valor por defecto a definir en el futuro
+
+	//validacion de cotas
+	if (conf->t_ret < TRET_MIN) {
+		//cota inferior
+		conf->t_ret = TRET_MIN;
+
+	}else if (conf->t_ret > TRET_MAX) {
+		//cota superior
+		conf->t_ret = TRET_MAX;
+	}
 	conf->final = crc8((uint8_t*)conf, sizeof(Conf_t) - 1);
 	enviarRecibir((uint8_t*)conf, rx, sizeof(Conf_t));
 }

@@ -10,6 +10,9 @@
 #include <cstddef>
 #include <cstdint>
 
+#define TRET_MAX 1500
+#define TRET_MIN 100
+
 volatile uint32_t velObjetivos = 0;
 volatile uint16_t adc_buffer[4] = {0};
 volatile uint16_t adc_buffer2[2] = {0};
@@ -91,6 +94,12 @@ uint8_t Spi::recibirReporte(uint8_t *reporte){
 
 
 		//tiempo de retroceso
+		if(conf->t_ret > TRET_MAX){
+			conf->t_ret = TRET_MAX;
+		}
+		if (conf->t_ret < TRET_MIN){
+			conf->t_ret = TRET_MIN;
+		}
 		TRetroceso = conf->t_ret;
 
 		static Ok_t ok{};
