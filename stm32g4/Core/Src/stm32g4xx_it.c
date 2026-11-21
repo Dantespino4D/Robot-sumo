@@ -48,6 +48,7 @@
 //las velocidades objetivos
 extern volatile uint32_t velObjetivos;
 extern volatile uint16_t adc_buffer[4];
+extern volatile uint16_t adc_buffer2[2];
 static uint32_t batFiltrada = 0;
 //tiempo
 uint64_t ms = 0;
@@ -105,6 +106,7 @@ extern void SPI_ResyncRX(void);
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_adc2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -301,6 +303,20 @@ void DMA1_Channel3_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles DMA1 channel4 global interrupt.
+  */
+void DMA1_Channel4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc2);
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM1 break interrupt and TIM15 global interrupt.
   */
 void TIM1_BRK_TIM15_IRQHandler(void)
@@ -420,7 +436,8 @@ void TIM6_DAC_IRQHandler(void)
 
 		if(stall == 1) {
 			//desactibar el AWD
-			ADC1->IER &= ~ADC_IER_AWD2IE;
+			ADC1->IER &= ~ADC_IER_AWD1IE;
+			ADC2->IER &= ~ADC_IER_AWD1IE;
 
 			//ejecutamos la maniobra
 			if((ms - tiempo_st) <= TStall) {
@@ -461,8 +478,10 @@ void TIM6_DAC_IRQHandler(void)
 				TIM1->CCR4 = 1023;
 
 				//reactivamos el AWD y limpiamos la bandera
-				ADC1->ISR = ADC_ISR_AWD2;
-				ADC1->IER |= ADC_IER_AWD2IE;
+				ADC1->ISR = ADC_ISR_AWD1;
+				ADC2->ISR = ADC_ISR_AWD1;
+				ADC1->IER |= ADC_IER_AWD1IE;
+				ADC2->IER |= ADC_IER_AWD1IE;
 			}
 			LL_TIM_EnableAllOutputs(TIM1);
 			return;
@@ -627,8 +646,12 @@ void EXTI15_10_IRQHandler(void)
 
 void ADC1_2_IRQHandler(void)
 {
+	// variables para almacenar el estado de los registros ISR
+	uint32_t isr1 = ADC1->ISR;
+	uint32_t isr2 = ADC2->ISR;
+
 	//validamos si hubo stall
-	if(ADC1->ISR & ADC_ISR_AWD2){
+	if(isr1 & ADC_ISR_AWD1){
 		//accion de proteccion por sobrevoltaje
 		TIM1->EGR |= TIM_EGR_BG;
 
@@ -644,7 +667,34 @@ void ADC1_2_IRQHandler(void)
 			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
 		}
 		//limpiar la bandera
+		ADC1->ISR = ADC_ISR_AWD1;
+	}
+	if(isr2 & ADC_ISR_AWD1){
+		//accion de proteccion por sobrevoltaje
+		TIM1->EGR |= TIM_EGR_BG;
+		//verificar estado actual
+		if (stall == 0) {
+			//activamos la evasion del stall
+			stall = 1;
+			tiempo_st = ms;
+			//notificamos al esp32
+			GPIOC->BSRR = GPIO_PIN_9;
+			//determinar la direccion del stall
+			stall_dir1 = (velActual_1 > 0) ? -1023 : (velActual_1 < 0) ? 1023 : 0;
+			stall_dir2 = (velActual_2 > 0) ? -1023 : (velActual_2 < 0) ? 1023 : 0;
+		}
+		//limpiar la bandera
+		ADC2->ISR = ADC_ISR_AWD1;
+	}
+	if(isr1 & ADC_ISR_AWD2){
+		//se limpiar la bandera de interrupcion
 		ADC1->ISR = ADC_ISR_AWD2;
+
+		//se marca la deteccion
+		tcrt3 = 1;
+
+		//frenado de emergencia
+		TIM1->EGR |= TIM_EGR_BG;
 	}
 }
 /* USER CODE END 1 */

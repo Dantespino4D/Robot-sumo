@@ -12,6 +12,7 @@
 
 volatile uint32_t velObjetivos = 0;
 volatile uint16_t adc_buffer[4] = {0};
+volatile uint16_t adc_buffer2[2] = {0};
 extern uint16_t TRetroceso;
 
 extern "C" uint8_t tcrt3;
@@ -49,10 +50,10 @@ void Spi::armarReporte(){
 	reporte.tcrt_3 = tcrt3;
 	//reporte.tcrt_3 = (COMP3->CSR & COMP_CSR_VALUE) ? 1 : 0;
 	reporte.tcrt_4 = (COMP2->CSR & COMP_CSR_VALUE) ? 1 : 0;
-	reporte.drv_1 = 0;
+	reporte.drv_1 = adc_buffer2[0];
 	reporte.drv_2 = adc_buffer[2];
 	reporte.drv_3 = adc_buffer[1];
-	reporte.drv_4 = 0;
+	reporte.drv_4 = adc_buffer2[1];
 	reporte.bateria = adc_buffer[3];
 	reporte.cont = cont;
 	reporte.final = crc8((uint8_t*)&reporte, sizeof(Stm_t) - 1);

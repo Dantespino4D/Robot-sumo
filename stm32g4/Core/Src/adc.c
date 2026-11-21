@@ -27,6 +27,7 @@
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
+DMA_HandleTypeDef hdma_adc2;
 
 /* ADC1 init function */
 void MX_ADC1_Init(void)
@@ -115,13 +116,27 @@ void MX_ADC1_Init(void)
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 	//aplicar el AWD a los canales de los DRV8871
-	ADC1->AWD2CR = (1 << 3) | (1 << 5) | (1 << 6) | (1 << 7);
+	ADC1->AWD2CR = (1UL << 3) | (1UL << 7);
 
 	//fijar el limite superior de corriente
-	ADC1->TR2 = (3800 << ADC_TR2_HT2_Pos) | (0 << ADC_TR2_LT2_Pos);
+	ADC1->TR2 = (3800UL << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
 
 	//habilitar la interrupcion del AWD2
 	ADC1->IER |= ADC_IER_AWD2IE;
+
+	//aplicar el AWD2 al canal del TCRT3
+	MODIFY_REG(ADC1->CFGR, ADC_CFGR_AWD1CH | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN | ADC_CFGR_JAWD1EN, (6UL << ADC_CFGR_AWD1CH_Pos) | ADC_CFGR_AWD1SGL | ADC_CFGR_AWD1EN);
+
+	//fijar el limite
+	ADC1->TR1 = ((4095UL >> 4) << ADC_TR1_HT1_Pos) | ((1024UL >> 4) << ADC_TR1_LT1_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC1->IER |= ADC_IER_AWD1IE;
+
+	//limpiar las banderas de interrupcion
+	ADC1->ISR = ADC_ISR_AWD1 | ADC_ISR_AWD2;
+
+	//habilitar la interrupcion del ADC1
 	NVIC_EnableIRQ(ADC1_2_IRQn);
   /* USER CODE END ADC1_Init 2 */
 
@@ -153,9 +168,9 @@ void MX_ADC2_Init(void)
   hadc2.Init.ContinuousConvMode = DISABLE;
   hadc2.Init.NbrOfConversion = 2;
   hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T1_TRGO;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
+  hadc2.Init.DMAContinuousRequests = ENABLE;
   hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc2.Init.OversamplingMode = DISABLE;
   if (HAL_ADC_Init(&hadc2) != HAL_OK)
@@ -178,13 +193,24 @@ void MX_ADC2_Init(void)
 
   /** Configure Regular Channel
   */
+  sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = ADC_REGULAR_RANK_2;
   if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN ADC2_Init 2 */
+	//aplicar el AWD a los canales de los DRV8871
+	ADC2->AWD2CR = (1UL << 14) | (1UL << 15);
 
+	//fijar el limite superior de corriente
+	ADC2->TR2 = (3800UL << ADC_TR2_HT2_Pos) | (0UL << ADC_TR2_LT2_Pos);
+
+	//habilitar la interrupcion del AWD2
+	ADC2->IER |= ADC_IER_AWD2IE;
+
+	//limpiar las banderas de interrupcion
+	ADC2->ISR = ADC_ISR_AWD2;
   /* USER CODE END ADC2_Init 2 */
 
 }
@@ -294,6 +320,24 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+    /* ADC2 DMA Init */
+    /* ADC2 Init */
+    hdma_adc2.Instance = DMA1_Channel4;
+    hdma_adc2.Init.Request = DMA_REQUEST_ADC2;
+    hdma_adc2.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_adc2.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_adc2.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_adc2.Init.Mode = DMA_CIRCULAR;
+    hdma_adc2.Init.Priority = DMA_PRIORITY_LOW;
+    if (HAL_DMA_Init(&hdma_adc2) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc2);
+
   /* USER CODE BEGIN ADC2_MspInit 1 */
 
   /* USER CODE END ADC2_MspInit 1 */
@@ -349,6 +393,8 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     */
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_11|GPIO_PIN_15);
 
+    /* ADC2 DMA DeInit */
+    HAL_DMA_DeInit(adcHandle->DMA_Handle);
   /* USER CODE BEGIN ADC2_MspDeInit 1 */
 
   /* USER CODE END ADC2_MspDeInit 1 */
