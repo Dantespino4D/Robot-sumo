@@ -57,6 +57,7 @@ uint64_t ms = 0;
 uint64_t tiempo = 0;
 uint16_t TRetroceso = 1000;
 uint8_t evasion = 0;
+uint8_t dir = 0;
 
 //variables de la evacion de stall
 volatile uint32_t tiempo_st = 0;
@@ -328,13 +329,19 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 	//se envia una señal al esp32
 	GPIOC->BSRR = GPIO_PIN_12;
 
-	//verifica si estamos en evacion
-	if(evasion == 1){
-		return;
-	}
-
 	//actuvar evasion
 	evasion = 1;
+
+	//reactivamos los frenos en caso de nueva evasion
+	LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
+	LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
+	//LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+	LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
+
+	//recuperamos la interrupcion del TCRT 3
+	ADC1->ISR = ADC_ISR_AWD1;
+	ADC1->IER |= ADC_IER_AWD1IE;
+
 
 	//se guarga el estado de los comparadores
 	tcrt1 = (COMP1->CSR & COMP_CSR_VALUE) ? 1 : 0;
@@ -377,24 +384,68 @@ void TIM6_DAC_IRQHandler(void)
 
 		//se evalua si efectuar la evacion
 		if(evasion == 1) {
-			//apagamos el freno para poder salir de la linea
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
-			//LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
-			LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
 
 			//limpiar la bandera de freno
 			LL_TIM_ClearFlag_BRK(TIM1);
 
+			//se evalua si la direccion se mantien o cual es
+			if(COMP1->CSR & COMP_CSR_VALUE) {
+				tcrt1 = 1;
+				tcrt3 = 0;
+				tcrt4 = 0;
+			}
+			if(COMP7->CSR & COMP_CSR_VALUE) {
+				tcrt2 = 1;
+				tcrt3 = 0;
+				tcrt4 = 0;
+			}
+			if(COMP2->CSR & COMP_CSR_VALUE) {
+				tcrt4 = 1;
+				tcrt1 = 0;
+				tcrt2 = 0;
+			}
+			if((ADC1->ISR & ADC_ISR_AWD1) && (ADC1->IER & ADC_IER_AWD1IE)) {
+				tcrt3 = 1;
+				tcrt1 = 0;
+				tcrt2 = 0;
+			}
+
+			//memoria que guarda si hubo cambio de direccion
+			uint8_t cambio = (tcrt1 || tcrt2) ? 1 : ((tcrt3 || tcrt4) ? 2 : 0);
+
+			//se detecta si hubo cambio de direccion de evasion
+			if(cambio != 0 && cambio != dir){
+				dir = cambio;
+				tiempo = ms;
+			}
 
 			//secuencia de retroceso direccion a
 			if(((ms - tiempo) <= TRetroceso) && (tcrt1 == 1 || tcrt2 == 1)) {
+				//desactivamos el freno de TCRT1 y TCRT2
+				LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
+				LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
+
+				//activamos los sensores contrarios
+				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
+				ADC1->ISR = ADC_ISR_AWD1;
+				ADC1->IER |= ADC_IER_AWD1IE;
+
 				//accion de retroceso direccion a
 				TIM1->CCR1 = 1023;
 				TIM1->CCR2 = 0;
 				TIM1->CCR3 = 1023;
 				TIM1->CCR4 = 0;
 			}else if(((ms - tiempo) <= TRetroceso) && (tcrt3 == 1 || tcrt4 == 1)) {
+				//desactivamos el freno de TCRT3 y TCRT4
+				LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
+				//LL_TIM_DisableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
+				ADC1->IER &= ~ADC_IER_AWD1IE;
+				ADC1->ISR = ADC_ISR_AWD1;
+
+				//activamos los sensores contrarios
+				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP1);
+				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
+
 				//accion de retroceso direcionb
 				TIM1->CCR1 = 0;
 				TIM1->CCR2 = 1023;
@@ -403,6 +454,7 @@ void TIM6_DAC_IRQHandler(void)
 			}else{
 				//termino la evacion
 				evasion = 0;
+				dir = 0;
 				tcrt1 = 0;
 				tcrt2 = 0;
 				tcrt3 = 0;
@@ -413,6 +465,11 @@ void TIM6_DAC_IRQHandler(void)
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP2);
 				//LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP3);
 				LL_TIM_EnableBreakInputSource(TIM1, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKCOMP7);
+
+
+				//reactivamos la interrupcion del TCRT3
+				ADC1->ISR = ADC_ISR_AWD1;
+				ADC1->IER |= ADC_IER_AWD1IE;
 
 				//limpiamos bandera
 				LL_TIM_ClearFlag_BRK(TIM1);
@@ -692,8 +749,17 @@ void ADC1_2_IRQHandler(void)
 		//se limpiar la bandera de interrupcion
 		ADC1->ISR = ADC_ISR_AWD1;
 
+		//se inicia la evacion
+		evasion = 1;
+
+		//se restablece el tiempo de evacion
+		tiempo = ms;
+
 		//se marca la deteccion
 		tcrt3 = 1;
+		tcrt1 = 0;
+		tcrt2 = 0;
+		tcrt4 = 0;
 
 		//frenado de emergencia
 		TIM1->EGR |= TIM_EGR_BG;
