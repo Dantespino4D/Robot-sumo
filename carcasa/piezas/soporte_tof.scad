@@ -26,10 +26,6 @@ hol = 0.25;
 pared_s = 0.8;
 base_s = 1.6;
 base_centro_largo = 16;
-poste_ancho = 4.4;
-poste_prof = 4;
-tornillo_d = 2.2;
-piloto_d = 1.7;
 boss_d = 5.4;
 boss_h = grosor_tapa;
 cable_d = 3.4;
@@ -74,38 +70,61 @@ module tof_en_pie() {
 			tof_modelo();
 }
 
-module soporte_tof(fijo = false) {
-	T = tof_espesor + hol;
-	y_poste = -T / 2;
-	x_oreja = tof_cuerpo_largo / 2 + tof_oreja_largo / 2;
-	z_tornillo = base_s + tof_ancho / 2;
-	alto_poste = z_tornillo + poste_ancho / 2;
-	x_poste = x_oreja + poste_ancho / 2;
+caja_pared = 1.6;
+caja_pared_lado = 1.0;
+caja_holgura_x = 0.15;
+caja_chaflan = 2;
+caja_entrada = 0.8;
+caja_entrada_alto = 1.2;
+caja_cables_x = 6;
+caja_cables_z = 5;
+caja_ventana_ancho = 10;
+
+module caja_soporte(fijo, cx, y0, y1, z_top, v_x0, v_x1, v_z0, v_z1, c_x) {
+	w = caja_pared;
+	wl = caja_pared_lado;
 	z_ini = fijo ? -0.1 : 0;
+	ya = min(-0.5, y0 - w - 0.1);
+	yb2 = max(0.3, y0 + 0.3);
 
 	difference() {
 		union() {
-			translate([-base_centro_largo / 2, y_poste, z_ini])
-				cube([base_centro_largo, T, base_s - z_ini]);
-			translate([-x_poste, y_poste - poste_prof, z_ini])
-				cube([2 * x_poste, poste_prof, base_s - z_ini]);
-			for (sx = [-1, 1])
-				translate([sx * x_oreja - poste_ancho / 2, y_poste - poste_prof, 0])
-					cube([poste_ancho, poste_prof, alto_poste]);
+			translate([-cx - wl, y0 - w, z_ini])
+				cube([2 * (cx + wl), (y1 - y0) + 2 * w, z_top - z_ini]);
 			if (!fijo)
 				translate([0, 0, -boss_h])
 					cylinder(d=boss_d, h=boss_h + base_s, $fn=48);
 		}
-		if (!fijo)
-			translate([0, 0, -boss_h - 1])
-				cylinder(d=cable_d, h=boss_h + base_s + 2, $fn=32);
-		translate([-6, y_poste - 0.1, base_s - 0.8])
-			cube([12, 3, 1]);
+		translate([-cx, 0, 0])
+			rotate([90, 0, 90])
+				linear_extrude(2 * cx)
+					polygon([
+						[y0, base_s], [y1, base_s],
+						[y1, z_top - caja_entrada_alto], [y1 + caja_entrada, z_top + 0.1],
+						[y0 - caja_entrada, z_top + 0.1], [y0, z_top - caja_entrada_alto]
+					]);
 		for (sx = [-1, 1])
-			translate([sx * x_oreja, y_poste + 1, z_tornillo])
-				rotate([90, 0, 0])
-					cylinder(d=piloto_d, h=poste_prof - 0.6 + 1, $fn=24);
+			translate([sx * (cx + wl), y1 + w, z_ini - 1])
+				linear_extrude(z_top - z_ini + 2)
+					polygon([[sx * 0.5, 0.5], [-sx * (caja_chaflan + 0.5), 0.5], [sx * 0.5, -(caja_chaflan + 0.5)]]);
+		translate([v_x0, y1 - 0.1, v_z0])
+			cube([v_x1 - v_x0, w + 0.2, v_z1 - v_z0]);
+		translate([-c_x, y0 - w - 0.1, base_s])
+			cube([2 * c_x, w + 0.2, caja_cables_z]);
+		translate([-c_x, ya, base_s - 0.8])
+			cube([2 * c_x, yb2 - ya, 1]);
+		translate([0, 0, -boss_h - 1])
+			cylinder(d=cable_d, h=boss_h + base_s + 2, $fn=32);
 	}
+}
+
+module soporte_tof(fijo = false) {
+	T = tof_espesor + hol;
+	cx = tof_largo / 2 + caja_holgura_x;
+	zc = base_s + tof_ancho / 2;
+	caja_soporte(fijo, cx, -T / 2, T / 2, base_s + tof_ancho,
+		-0.5 - caja_ventana_ancho / 2, -0.5 + caja_ventana_ancho / 2,
+		zc - 4.5, zc + 4.5, caja_cables_x);
 }
 
 module soporte_colocado(s, fijo = false) {

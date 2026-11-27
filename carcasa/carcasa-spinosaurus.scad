@@ -580,15 +580,10 @@ for (p = [[-37.015, -4.671], [-37.015, 0.329], [-37.015, 5.329], [35.463, -16.10
 module tapa_fija_completa() {
 	union() {
 		tapa(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
-		difference() {
-			for (j = [0 : len(soportes) - 1])
-				if (j == idx_ada)
-					ada_colocado(soportes[j], true);
-				else
-					soporte_colocado(soportes[j], true);
-			for (s = soportes)
-				translate([s[0], s[1], z_tapa_sup - 1])
-					cube([hueco_x, hueco_y, 20], center=true);
-		}
+		for (j = [0 : len(soportes) - 1])
+			if (j == idx_ada)
+				ada_colocado(soportes[j], true);
+			else
+				soporte_colocado(soportes[j], true);
 	}
 }
