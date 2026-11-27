@@ -96,6 +96,13 @@ tapa(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
 seguro(0, largo_inferior/2, z_seguro, 180);
 seguro(0, largo_inferior/2, z_seguro, 0);
 
+//ruedas
+x_llanta = ancho_base_sup / 2 + luz_llanta;
+y_llanta = largo_base_sup / 2 - 15;
+for (sx = [-1, 1], sy = [-1, 1])
+	llanta(sx * x_llanta, sy * y_llanta, sx);
+echo(ancho_con_cubo = 2 * (x_llanta + largo_cubo - offset_neumatico));
+
 //codigo
 module pcb_inferior(x, y, z) {
 	translate([x, y, z])
@@ -111,13 +118,12 @@ module pcb_superior(x, y, z) {
         		import("../PCBs/superior/3D/sumo-PCB-superior.stl", convexity=10);
 }
 
+largo_tcrt = 10.35;
+ancho_tcrt = 5.95;
+cols_x_tcrt = [8, 76];
+filas_y_tcrt = [3.5, 60.5];
+
 module base(ancho, largo, x, y, z) {
-	largo_tcrt = 10.35;
-	ancho_tcrt = 5.95;
-
-	cols_x_tcrt = [8, 76];
-    filas_y_tcrt = [3.5, 60.5];
-
 	union() {
 		difference() {
 	    	translate([x, y, z])
@@ -139,10 +145,10 @@ module base(ancho, largo, x, y, z) {
 				cube([1 + holgura + 0.1, 14, pcb1_z - (luz_suelo + piso - 0.1)], center=true);
 		difference() {
 			union() {
-				translate([0, -largo/2 - grosor_pilar + pared, alto_base + alto_pilar/2 + piso])
-					cube([ancho_pilar, grosor_pilar, alto_pilar], center=true);
-				translate([0, largo/2 + grosor_pilar - pared, alto_base + alto_pilar/2 + piso])
-					cube([ancho_pilar, grosor_pilar, alto_pilar], center=true);
+				translate([0, -largo/2 - grosor_pilar + pared, (luz_suelo + alto_base + alto_pilar + piso) / 2])
+					cube([ancho_pilar, grosor_pilar, alto_base + alto_pilar + piso - luz_suelo], center=true);
+				translate([0, largo/2 + grosor_pilar - pared, (luz_suelo + alto_base + alto_pilar + piso) / 2])
+					cube([ancho_pilar, grosor_pilar, alto_base + alto_pilar + piso - luz_suelo], center=true);
 			}
 
 			translate([0, -largo/2 - grosor_pilar + pared, z_seguro])
@@ -150,6 +156,11 @@ module base(ancho, largo, x, y, z) {
 			translate([0, largo/2 + grosor_pilar - pared, z_seguro])
 				cube([ancho_seguro, grosor_pilar + 1, grosor_seguro], center=true);
 		}
+
+		y_borde_rampa = largo/2 + holgura + pared;
+		ancho_rampa = ancho + 2 * (holgura + pared_x);
+		for (s = [1, -1]) rampa_al_ras(ancho_rampa, s * y_borde_rampa, s);
+//		for (s = [1, -1]) rampa_elevada(ancho_rampa, s * y_borde_rampa, s);
 	}
 }
 
@@ -365,16 +376,164 @@ module pulsador() {
 		cylinder(d=4.4, h=1, $fn=32);
 }
 
+A_eje = 2.6;
+d_eje = 3.0;
+hol_d = 0.08;
+hol_plano = 0.03;
+c_plano = A_eje - d_eje / 2 + hol_plano;
+
+largo_eje = 10;
+offset_neumatico = 1.9;
+largo_cubo = largo_eje;
+d_cubo = 8;
+d_rebaje = 5;
+h_rebaje = 1;
+
+r_asiento = 12.7;
+ancho_rin = 5;
+espesor_llanta_rin = 2;
+n_radios = 5;
+espesor_radio = 2;
+ancho_radio = 2.5;
+prof_ranura = 0.8;
+ancho_ranura = 1;
+
+r_int_neu = 12.5;
+rib_alto = 0.6;
+rib_ancho = 0.9;
+r_hombro = 1;
+
+module perfil_D(c) {
+	difference() {
+		circle(d=d_eje + hol_d, $fn=64);
+		translate([-5, c])
+			square([10, 5]);
+	}
+}
+
+module rin() {
+	zc = ancho_llanta / 2;
+	z0 = -offset_neumatico;
+	difference() {
+		union() {
+			translate([0, 0, z0])
+				cylinder(d=d_cubo, h=largo_cubo, $fn=64);
+			translate([0, 0, zc - ancho_rin / 2])
+				difference() {
+					cylinder(r=r_asiento, h=ancho_rin, $fn=96);
+					translate([0, 0, -0.1])
+						cylinder(r=r_asiento - espesor_llanta_rin, h=ancho_rin + 0.2, $fn=96);
+				}
+			for (i = [0 : n_radios - 1])
+				rotate([0, 0, i * 360 / n_radios])
+					translate([0, -ancho_radio / 2, zc - espesor_radio / 2])
+						cube([r_asiento - espesor_llanta_rin / 2, ancho_radio, espesor_radio]);
+		}
+		translate([0, 0, zc - ancho_ranura / 2 + 0.0])
+			difference() {
+				cylinder(r=r_asiento + 1, h=ancho_ranura, $fn=96);
+				translate([0, 0, -0.1])
+					cylinder(r=r_asiento - prof_ranura, h=ancho_ranura + 0.2, $fn=96);
+			}
+		translate([0, 0, z0 - 0.1])
+			linear_extrude(height=largo_cubo + 0.2)
+				perfil_D(c_plano);
+		translate([0, 0, z0 - 0.1])
+			cylinder(d=d_rebaje, h=h_rebaje + 0.1, $fn=48);
+	}
+}
+
+module neumatico() {
+	rotate_extrude($fn=128)
+		union() {
+			hull() {
+				translate([r_int_neu, 0])
+					square([0.01, ancho_llanta]);
+				translate([r_llanta - r_hombro, r_hombro])
+					circle(r=r_hombro, $fn=32);
+				translate([r_llanta - r_hombro, ancho_llanta - r_hombro])
+					circle(r=r_hombro, $fn=32);
+			}
+			translate([r_asiento - prof_ranura, ancho_llanta / 2 - rib_ancho / 2])
+				square([r_int_neu - (r_asiento - prof_ranura) + 0.01, rib_ancho]);
+		}
+}
+
+module rueda() {
+	color([0.85, 0.85, 0.85])
+		rin();
+	color([0.1, 0.1, 0.1])
+		neumatico();
+}
+
+module cupon_eje() {
+	pasos = [-1, 0, 1];
+	ancho_c = 34;
+	largo_c = 14;
+	alto_c = 5;
+	difference() {
+		translate([-ancho_c / 2, -largo_c / 2, 0])
+			cube([ancho_c, largo_c, alto_c]);
+		for (i = pasos) {
+			c = (A_eje - d_eje / 2) + hol_plano + i * 0.1;
+			translate([i * 10, 1.5, -0.1])
+				linear_extrude(height=alto_c + 0.2)
+					perfil_D(c);
+			translate([i * 10, -4.5, alto_c - 0.4])
+				linear_extrude(height=0.5)
+					text(str(c), size=2, halign="center", valign="center");
+		}
+	}
+}
+
 module llanta(x, y, sentido) {
-	translate([x, y, r_llanta + 0.3])
-		rotate([0, 90, 0])
-			cylinder(r=r_llanta, h=ancho_llanta * sentido, $fn=64);
+	translate([x, y, r_llanta])
+		rotate([0, sentido > 0 ? 90 : -90, 0])
+			rueda();
 }
 
 //cubo de altura 11 con dimenciones arbitarias
 module capacitorAltura(x, y, z){
 	translate([x, y, z])
 		cube([5, 5, 11], center=true);
+}
+
+angulo_rampa = 22;
+alto_pared_rampa = 6.2;
+sep_rampa = 0.5;
+
+module rampa_base(ancho, y_borde, sentido, z_punta) {
+	largo_total = (alto_pared_rampa - z_punta) / tan(angulo_rampa);
+	translate([0, y_borde, 0])
+		scale([1, sentido, 1])
+			translate([-ancho/2, 0, 0])
+				rotate([90, 0, 90])
+					linear_extrude(height=ancho)
+						polygon([[-pared, z_punta], [largo_total, z_punta], [0, alto_pared_rampa], [-pared, alto_pared_rampa]]);
+}
+
+module relleno_fondo(sentido) {
+	ancho_f = ancho + 2 * (holgura + pared_x);
+	largo_f = largo_inferior / 2 + holgura + pared;
+	difference() {
+		translate([-ancho_f/2, sentido > 0 ? 0 : -largo_f, sep_rampa])
+			cube([ancho_f, largo_f, luz_suelo - sep_rampa + 0.01]);
+		for (px = cols_x_tcrt, py = filas_y_tcrt) {
+			pos_y = py - largo_inferior / 2;
+			if (pos_y * sentido > 0)
+				translate([px - ancho / 2, pos_y, sep_rampa + (luz_suelo + 0.1 - sep_rampa) / 2 - 0.05])
+					cube([largo_tcrt + 0.3, ancho_tcrt + 0.3, luz_suelo + 0.1 - sep_rampa + 0.1], center=true);
+		}
+	}
+}
+
+module rampa_al_ras(ancho, y_borde, sentido) {
+	rampa_base(ancho, y_borde, sentido, sep_rampa);
+	relleno_fondo(sentido);
+}
+
+module rampa_elevada(ancho, y_borde, sentido) {
+	rampa_base(ancho, y_borde, sentido, luz_suelo);
 }
 
 difference() {
