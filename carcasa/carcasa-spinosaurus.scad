@@ -1,3 +1,9 @@
+ensamble = true;
+include <piezas/soporte_tof_2.scad>
+
+// Comenta esta línea para usar soportes móviles (pegados) en vez de fijos
+fijos = true;
+
 ancho = 84;
 largo_inferior = 64;
 largo_superior = 51.38;
@@ -92,7 +98,19 @@ capacitorAltura(0, 0, pcb1_z + grosor_pcb / 2 + 11 / 2);
 base(ancho, largo_inferior, 0, 0, z_base);
 baseIntermedia(ancho_base_sup, largo_base_sup, 0, 0, z_inter);
 baseSuperior(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
-tapa(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
+if (fijos)
+	tapa_fija_completa();
+else
+	tapa(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
+for (j = [0 : len(soportes) - 1]) {
+	if (!fijos) {
+		color([0.9, 0.5, 0.1])
+			if (j == idx_ada) ada_colocado(soportes[j]);
+			else soporte_colocado(soportes[j]);
+	}
+	if (j == idx_ada) ada_placa_colocada(soportes[j]);
+	else tof_colocado(soportes[j]);
+}
 seguro(0, largo_inferior/2, z_seguro, 180);
 seguro(0, largo_inferior/2, z_seguro, 0);
 
@@ -272,6 +290,13 @@ module tapa(ancho, largo, x, y, z) {
 	x_borde = -ancho/2 - 1;
 	usb_x_max = 5.923 - largo_pcb_sup/2 + 9.0/2;
 	swd_x_max = 3.383 - largo_pcb_sup/2 + 4.25/2;
+	usb_y = 32.284 - largo_superior/2 + offset_y;
+	swd_y = 40.793 - largo_superior/2 + offset_y;
+	usb_alto = 7.5;
+	swd_alto = 6.0;
+	acceso_x_max = max(usb_x_max, swd_x_max);
+	acceso_y_min = min(usb_y - usb_alto/2, swd_y - swd_alto/2);
+	acceso_y_max = max(usb_y + usb_alto/2, swd_y + swd_alto/2);
 
 	translate([x, y, z])
 		translate([0, 0, h_total / 2 + grosor / 2])
@@ -288,13 +313,11 @@ module tapa(ancho, largo, x, y, z) {
 					           46.127 - largo_superior/2 + offset_y, 0])
 						cube([8.5, 8.5, grosor + 2], center=true);
 
-					translate([(x_borde + usb_x_max)/2,
-					           32.284 - largo_superior/2 + offset_y, 0])
-						cube([usb_x_max - x_borde, 7.5, grosor + 2], center=true);
-
-					translate([(x_borde + swd_x_max)/2,
-					           40.793 - largo_superior/2 + offset_y, 0])
-						cube([swd_x_max - x_borde, 6.0, grosor + 2], center=true);
+					translate([(x_borde + acceso_x_max)/2,
+					           (acceso_y_min + acceso_y_max)/2, 0])
+						cube([acceso_x_max - x_borde,
+						      acceso_y_max - acceso_y_min,
+						      grosor + 2], center=true);
 
 					translate([36.567, -6.527, 0])
 						cylinder(d=3.0, h=grosor + 2, center=true, $fn=32);
@@ -551,5 +574,21 @@ z_pulsador = z_pcb_sup + grosor_pcb + alto_sw + 0.3;
 for (p = [[-37.015, -4.671], [-37.015, 0.329], [-37.015, 5.329], [35.463, -16.101], [35.463, -11.101]])
 	translate([p[0], p[1], z_pulsador])
 		pulsador();
-translate([0, 25, 52])
-	pulsador();
+//translate([0, 25, 52])
+//	pulsador();
+
+module tapa_fija_completa() {
+	union() {
+		tapa(ancho_base_sup, largo_base_sup, 0, 0, z_base_sup);
+		difference() {
+			for (j = [0 : len(soportes) - 1])
+				if (j == idx_ada)
+					ada_colocado(soportes[j], true);
+				else
+					soporte_colocado(soportes[j], true);
+			for (s = soportes)
+				translate([s[0], s[1], z_tapa_sup - 1])
+					cube([hueco_x, hueco_y, 20], center=true);
+		}
+	}
+}
